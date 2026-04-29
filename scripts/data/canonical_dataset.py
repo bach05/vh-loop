@@ -1,4 +1,4 @@
-# src/vlmdojo/data/canonical_dataset.py
+# src/data/canonical_dataset.py
 
 from pathlib import Path
 import json

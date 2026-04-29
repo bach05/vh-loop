@@ -39,6 +39,7 @@ qwen_vl_utils = ">=0.0.14"
 accelerate = ">=0.30.0" # TO BE ADJUSTED
 bitsandbytes = ">=0.41" # TO BE ADJUSTED
 peft = ">=0.6" # TO BE ADJUSTED
+trl = "==1.3.0"
 
 pillow = ">=10.0" # TO BE ADJUSTED
 pycocotools = ">=2.0" # TO BE ADJUSTED
