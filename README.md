@@ -22,6 +22,7 @@ The folder structure of the VLM-Human Loop project is organized as follows:
   - `data/`: contains code for data representation, loading, and preprocessing.
   - `models/`: contains code for wrapping and integrating the vision-language model.
   - `training/`: contains code for training the VLMs.
+- `tests/`: contains code for testing the different components of the project.
 
 ## Data Representation
 
@@ -32,7 +33,7 @@ The data schema contains the base informative elements of the dataset. We use `V
 - `sample_id`: identifier of the sample in the dataset, integer
 - `query_image`: image where to detect targets
 - `images`: list of additional images to be used to build the prompt, optional
-- `videos`: list of videos to be used to build the prompt, optional~~
+- ~~`videos`: list of videos to be used to build the prompt, optional~~
 - `messages`: the chat to prompt the VLM: what to detect, description of the target objects, example images (optional), etc… and instruction to generate the bbox (classes, format).
 - `target`: the prediction target, to be updated step by step.
     - `text`:  a short answer (like just the bboxes) or a reasoning for the CoT.
