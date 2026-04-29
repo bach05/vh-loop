@@ -23,10 +23,22 @@ def sample_to_messages(sample: VLMSample) -> list[dict[str, Any]]:
                 )
 
             elif part.type == "image":
+
+                image_id = part.text
+
+                if image_id == "query":
+                    img_path = sample.query_image.path
+                else:
+                    img_ref = sample.images.get(image_id, None)
+                    if img_ref is None:
+                        raise ValueError(f"Image ID {image_id} not found in sample images")
+                    else:
+                        img_path = img_ref.path
+
                 content.append(
                     {
                         "type": "image",
-                        "path": part.image.path,
+                        "path": img_path,
                     }
                 )
 

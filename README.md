@@ -68,17 +68,16 @@ A dataset is stored in a JSONL file, where each line is a JSON object representi
     "sample_id": 1,
     "dataset_id": "panizzolo_v1",
     "split": "train",
-    "query_image": {
-    "id": "query",
-    "uri": "file:///data/images/motor_000001.png",
-    "local_path": "/data/images/motor_000001.png",
-    "width": 2448,
-    "height": 2048
+    "query_image": 
+    {
+      "id": "query",
+      "local_path": "/data/images/motor_000001.png",
+      "width": 2448,
+      "height": 2048
     },
     "images": [
     {
       "id": "sample1",
-      "uri": "file:///data/images/motor_000001.png",
       "local_path": "/data/images/motor_000001.png",
       "width": 2448,
       "height": 2048
@@ -89,7 +88,7 @@ A dataset is stored in a JSONL file, where each line is a JSON object representi
       "role": "user",
       "content": [
         {
-          "type": "image_ref",
+          "type": "image",
           "image_id": "query"
         },
         {
