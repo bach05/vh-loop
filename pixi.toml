@@ -2,7 +2,7 @@
 authors = ["Bacchin Alberto <bacchinalb@dei.unipd.it>, Riccardo Bastianello <riccardo.bastianello@it-robotics.it>"]
 channels = ["pytorch", "nvidia", "conda-forge"]
 name = "vh-loop"
-platforms = ["linux-64", "win-64", "linux-aarch64"]
+platforms = ["linux-64", "win-64"]
 version = "0.1.0"
 
 [system-requirements]
@@ -33,7 +33,7 @@ einops = ">=0.8.1" # TO BE ADJUSTED
 xformers = ">=0.0.30" # TO BE ADJUSTED
 qwen_vl_utils = ">=0.0.14"
 #flash_attn = ">=2.7.4.post1" # Takes hours to compile, so we use a pre-built wheel instead.
-flash_attn = { url = "https://github.com/mjun0812/flash-attention-prebuild-wheels/releases/download/v0.7.16/flash_attn-2.8.3%2Bcu128torch2.9-cp313-cp313-linux_x86_64.whl" } #pre-built wheel for flash-attn, to speedup
+#flash_attn = { url = "https://github.com/mjun0812/flash-attention-prebuild-wheels/releases/download/v0.7.16/flash_attn-2.8.3%2Bcu128torch2.9-cp313-cp313-linux_x86_64.whl" } #pre-built wheel for flash-attn, to speedup
 flash-linear-attention = ">=0.4.1" #to speedup qwen 3.5
 causal-conv1d = ">=1.6.1" #to speedup qwen 3.5
 
@@ -43,6 +43,12 @@ peft = ">=0.6" # TO BE ADJUSTED
 
 pillow = ">=10.0" # TO BE ADJUSTED
 pycocotools = ">=2.0" # TO BE ADJUSTED
+
+[target.linux-64.pypi-dependencies]
+flash-attn = { url = "https://github.com/mjun0812/flash-attention-prebuild-wheels/releases/download/v0.7.16/flash_attn-2.8.3%2Bcu128torch2.9-cp313-cp313-linux_x86_64.whl" }
+
+[target.win-64.pypi-dependencies]
+flash-attn = { url = "https://huggingface.co/Wildminder/AI-windows-whl/resolve/main/flash_attn-2.8.3%2Bcu128torch2.9.1cxx11abiTRUE-cp313-cp313-win_amd64.whl" }
 
 # --- PATH CONFIGURATION ---
 # This ensures 'import src.model_core' works without 'pip install -e .'
