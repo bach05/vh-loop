@@ -1,0 +1,18 @@
+per_device_train_batch_size: 2
+gradient_accumulation_steps: 2
+learning_rate: 2e-5
+weight_decay: 0.01
+
+num_train_epochs: 3
+max_train_steps: -1 #set to -1 to disable max train steps, otherwise it will override num_train_epochs
+lr_scheduler_type: linear
+
+bf16: true #set to true to use bf16 precision, which can speed up training and reduce memory usage on compatible hardware. Set to false to use fp16 or fp32 precision depending on the model and hardware capabilities.
+fp16: false #set to true to use fp16 precision, which can speed up training and reduce memory usage on compatible hardware. Set to false to use bf16 or fp32 precision depending on the model and hardware capabilities.
+
+gradient_checkpointing: true #set to true to enable gradient checkpointing, which can reduce memory usage during training by trading off computation. Set to false to disable it.
+
+logging_steps: 10 #log training progress every N steps, set to 0 to disable logging
+save_steps: 100 #save the model every N steps, set to 0 to disable
+eval_strategy: epoch #evaluation strategy, can be 'no', 'steps', or 'epoch'
+eval_steps: None #evaluate the model every N steps

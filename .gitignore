@@ -1,3 +1,4 @@
 .pixi/
 .idea/
 *__pycache__/
+outputs/

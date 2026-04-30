@@ -1,0 +1,5 @@
+task_type: CAUSAL_LM #the type of the task, can be CAUSAL_LM, SEQ2SEQ_LM, or OTHER
+rank_dimension: 8
+lora_alpha: 16
+dropout: 0.1
+bias: "none" #can be "none", "all", or "lora_only"

@@ -2,26 +2,14 @@
 
 from abc import ABC, abstractmethod
 from typing import Any
-from vlmdojo.data.schema import VLMSample, Target
+from scripts.data.schema import VLMSample, Target
 
 
 class VLMAdapter(ABC):
     name: str
 
     @abstractmethod
-    def load_model_and_processor(self, cfg: dict) -> tuple[Any, Any]:
-        pass
-
-    @abstractmethod
-    def sample_to_messages(self, sample: VLMSample) -> list[dict]:
-        pass
-
-    @abstractmethod
-    def sample_to_image_paths(self, sample: VLMSample) -> list[str]:
-        pass
-
-    @abstractmethod
-    def target_to_assistant_message(self, target: Target) -> dict:
+    def get_model_and_processor(self, cfg: dict) -> tuple[Any, Any]:
         pass
 
     @abstractmethod

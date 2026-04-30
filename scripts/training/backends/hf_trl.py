@@ -1,55 +1,50 @@
 # src/training/backends/hf_trl.py
 
 from trl import SFTTrainer, SFTConfig
-from peft import LoraConfig
+from scripts.training.train_backend import TrainingBackend
 
-class HFTRLBackend:
-    def train(self, cfg, adapter, train_dataset, eval_dataset=None):
+class HFSFTBackend(TrainingBackend):
 
-        model, processor = adapter.load_model_and_processor(cfg.model)
+    def __init__(self, model, processor, cfg, peft_config = None) -> None:
 
-        lora_config = LoraConfig(
-            r=cfg.lora.r,
-            lora_alpha=cfg.lora.alpha,
-            lora_dropout=cfg.lora.dropout,
-            target_modules=adapter.get_lora_target_modules(cfg.lora),
-            task_type="CAUSAL_LM",
-        )
+        self.model = model
+        self.processor = processor
+        self.peft_config = peft_config
 
-        hf_train = canonical_to_hf_sft(train_dataset.samples, adapter)
+        self.cfg = cfg
+        self.output_dir = './outputs'
 
-        hf_eval = None
-        if eval_dataset is not None:
-            hf_eval = canonical_to_hf_sft(eval_dataset.samples, adapter)
 
-        collator = adapter.build_collator(processor, cfg.trainer)
+
+    def train(self, train_dataset, eval_dataset=None, collator=None):
 
         training_args = SFTConfig(
-            output_dir=cfg.output_dir,
-            per_device_train_batch_size=cfg.trainer.per_device_train_batch_size,
-            gradient_accumulation_steps=cfg.trainer.gradient_accumulation_steps,
-            learning_rate=cfg.trainer.learning_rate,
-            num_train_epochs=cfg.trainer.num_train_epochs,
-            bf16=cfg.trainer.bf16,
-            fp16=cfg.trainer.fp16,
-            gradient_checkpointing=cfg.trainer.gradient_checkpointing,
-            logging_steps=cfg.trainer.logging_steps,
-            save_steps=cfg.trainer.save_steps,
-            eval_steps=cfg.trainer.eval_steps,
+            output_dir=self.output_dir,
+            per_device_train_batch_size=self.cfg.per_device_train_batch_size,
+            gradient_accumulation_steps=self.cfg.gradient_accumulation_steps,
+            learning_rate=self.cfg.learning_rate,
+            num_train_epochs=self.cfg.num_train_epochs,
+            bf16=self.cfg.bf16,
+            fp16=self.cfg.fp16,
+            gradient_checkpointing=self.cfg.gradient_checkpointing,
+            logging_steps=self.cfg.logging_steps,
+            save_steps=self.cfg.save_steps,
+            eval_strategy=self.cfg.eval_strategy,
+            eval_steps=self.cfg.eval_steps,
             remove_unused_columns=False,
         )
 
-        trainer = SFTTrainer(
-            model=model,
+        self.trainer = SFTTrainer(
+            model=self.model,
             args=training_args,
-            train_dataset=hf_train,
-            eval_dataset=hf_eval,
-            processing_class=processor,
-            peft_config=lora_config,
+            train_dataset=train_dataset,
+            eval_dataset=eval_dataset,
+            processing_class=self.processor,
+            peft_config=self.peft_config,
             data_collator=collator,
         )
 
-        trainer.train()
-        trainer.save_model(cfg.output_dir)
+        self.trainer.train()
 
-        return cfg.output_dir
+    def save_results(self):
+        self.trainer.save_model(self.output_dir)
