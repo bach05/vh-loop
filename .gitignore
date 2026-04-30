@@ -1,2 +1,3 @@
 .pixi/
 .idea/
+*__pycache__/
