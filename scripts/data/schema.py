@@ -8,6 +8,25 @@ import numpy as np
 
 NORM_SIZE = 1000  # canonical square side length for coordinates normalization
 
+# Classes to represente the header of the dataset on the first line
+class DatasetInfo(BaseModel):
+    dataset_id: str
+    description: Optional[str] = None
+    annotation_source: Optional[str] = None
+    has_semantic_masks: bool = False
+    has_point: bool = False
+    has_bbox: bool = True
+    date_collected: Optional[str] = None
+    label_info: dict[str, str] = Field(default_factory=dict)
+
+
+class DatasetInfoRecord(BaseModel):
+    record_type: Literal["dataset_info"]
+    schema_version: str = "vh_loop.dataset.v1"
+    info: DatasetInfo
+
+# Data classes
+
 class Image(BaseModel):
     path: str
     size: tuple[int, int]  # (width, height)
@@ -86,9 +105,16 @@ class BoundingBox(BaseModel):
         return self.width * self.height
 
 
-class MessageContent(BaseModel):
-    type: Literal["text", "image"]
+class TextContent(BaseModel):
+    type: Literal["text"]
     text: str
+
+
+class ImageContent(BaseModel):
+    type: Literal["image"]
+    image_id: str
+
+MessageContent = TextContent | ImageContent
 
 
 class Message(BaseModel):
@@ -131,9 +157,10 @@ class RLEMask(BaseModel):
 
 class Annotation(BaseModel):
     label: int
-    bbox: BoundingBox
-    point: Point
+    bbox: Optional[BoundingBox] = None
+    point: Optional[Point] = None
     mask: Optional[RLEMask] = None
+    source: Optional[str] = None
 
     @classmethod
     def from_mask(cls, label: str, mask, bbox: Optional[BoundingBox] = None) -> "Annotation":
@@ -164,3 +191,7 @@ class VLMSample(BaseModel):
     messages: list[Message]
     target: Optional[Target] = None
     metadata: dict[str, Any] = Field(default_factory=dict)
+
+class SampleRecord(VLMSample):
+    record_type: Literal["sample"] = "sample"
+    schema_version: str = "vh_loop.dataset.v1"
