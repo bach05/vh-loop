@@ -5,8 +5,7 @@ from typing import Literal, Optional, Any, cast
 from pydantic import BaseModel, Field, model_validator
 import numpy as np
 
-
-NORM_SIZE = 1000  # canonical square side length for coordinates normalization
+from scripts.core.constants import NORM_SIZE
 
 # Classes to represente the header of the dataset on the first line
 class DatasetInfo(BaseModel):

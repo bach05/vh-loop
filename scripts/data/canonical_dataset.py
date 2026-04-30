@@ -3,7 +3,7 @@
 from pathlib import Path
 import json
 from torch.utils.data import Dataset
-from .schema import VLMSample
+from scripts.data.schema import VLMSample
 
 
 class CanonicalVLMDataset(Dataset):

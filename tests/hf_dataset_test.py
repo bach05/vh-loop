@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 from scripts.data.hf_dataset import canonical_manifest_to_hf_sft
-from scripts.data.canonical_dataset import CanonicalVLMDataset
 
-json_file = "/media/iaslab/data_bacchin/panizzolo/vh_test.jsonl"
+json_file = "/media/iaslab/data_bacchin/panizzolo/paniz_train_04_02_SINGLE.vh_loop.jsonl"
 
 dataset_hf = canonical_manifest_to_hf_sft(json_file)
 

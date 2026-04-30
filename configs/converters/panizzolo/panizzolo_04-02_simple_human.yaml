@@ -1,0 +1,23 @@
+# configs/data/panizzolo_coco_to_canonical.yaml
+
+coco_json: /media/iaslab/data_bacchin/panizzolo/paniz_train_04_02_SINGLE.json
+output_jsonl: /media/iaslab/data_bacchin/panizzolo/paniz_train_04_02_SINGLE.vh_loop.jsonl
+
+dataset_id: panizzolo_train_04_02_single
+split: train
+
+description: "Panizzolo conveyor belt dataset with motor part instance annotations."
+annotation_source: human
+
+prompt_strategy: simple_prompt
+target_strategy: bbox_json_norm1000
+
+drop_empty: false
+
+# null means keep all categories.
+# Otherwise use, for example: [1, 2]
+include_categories: null
+
+# false means store label as original COCO category id.
+# true means store label as category name.
+label_as_name: false
