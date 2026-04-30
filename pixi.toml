@@ -43,6 +43,7 @@ trl = "==1.3.0"
 
 pillow = ">=10.0" # TO BE ADJUSTED
 pycocotools = ">=2.0" # TO BE ADJUSTED
+datasets = "==4.8.5"
 
 [target.linux-64.pypi-dependencies]
 flash-attn = { url = "https://github.com/mjun0812/flash-attention-prebuild-wheels/releases/download/v0.7.16/flash_attn-2.8.3%2Bcu128torch2.9-cp313-cp313-linux_x86_64.whl" }
