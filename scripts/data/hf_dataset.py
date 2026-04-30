@@ -2,11 +2,14 @@ from pathlib import Path
 from typing import Any
 
 from datasets import Dataset as HFDataset
+import hashlib
 
-from src.data.schema import VLMSample
+from scripts.data.schema import VLMSample
+from scripts.data.manifest_utils import iter_vlm_samples_from_manifest
 
 #Convert VLMSample to a conversation
-def sample_to_messages(sample: VLMSample) -> list[dict[str, Any]]:
+def sample_to_messages(sample: VLMSample) -> (int, list[dict[str, Any]]):
+
     messages = []
 
     # Parse messages
@@ -24,7 +27,7 @@ def sample_to_messages(sample: VLMSample) -> list[dict[str, Any]]:
 
             elif part.type == "image":
 
-                image_id = part.text
+                image_id = part.image_id
 
                 if image_id == "query":
                     img_path = sample.query_image.path
@@ -67,37 +70,35 @@ def sample_to_messages(sample: VLMSample) -> list[dict[str, Any]]:
         }
     )
 
-    return messages
+    ret_dict = \
+    {
+        "messages": messages,
+    }
+
+    return ret_dict
 
 
-def iter_sft_rows_from_manifest(
-    manifest_path: str | Path,
-):
-    manifest_path = Path(manifest_path)
+def iter_sft_rows_from_manifest(manifest_path):
 
-    with manifest_path.open("r", encoding="utf-8") as f:
-        for line_idx, line in enumerate(f, start=1):
-            if not line.strip():
-                continue
+    for sample in iter_vlm_samples_from_manifest(
+        manifest_path,
+        attach_dataset_info=False,
+    ):
+        yield sample_to_messages(sample)
 
-            try:
-                sample = VLMSample.model_validate_json(line)
 
-                yield {
-                    "sample_id": sample.sample_id,
-                    "messages": sample_to_messages(sample),
-                }
+def manifest_fingerprint(manifest_path: str | Path) -> str:
+    path = Path(manifest_path)
+    stat = path.stat()
 
-            except Exception as e:
-                raise RuntimeError(
-                    f"Failed to convert sample at line {line_idx} "
-                    f"of manifest {manifest_path}"
-                ) from e
+    raw = f"{path.resolve()}:{stat.st_mtime_ns}:{stat.st_size}:sft-v1"
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]
 
 
 def canonical_manifest_to_hf_sft(
     manifest_path: str | Path,
 ) -> HFDataset:
     return HFDataset.from_generator(
-        lambda: iter_sft_rows_from_manifest(manifest_path)
+        lambda: iter_sft_rows_from_manifest(manifest_path),
+        fingerprint=manifest_fingerprint(manifest_path), #guarantee to recompute the dataset when path changes or file is updated
     )
