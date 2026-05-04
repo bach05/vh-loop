@@ -1,0 +1,7 @@
+to_tensor: false
+additional_targets:
+ops:
+  - name: Crop
+    params: {x_min: 400, y_min: 0, x_max: 3600, y_max: 2160, p: 1.0}
+  - name: Resize
+    params: {height: 1080, width: 1600, p: 1.0}
