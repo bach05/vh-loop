@@ -26,7 +26,7 @@ class DatasetInfoRecord(BaseModel):
 
 # Data classes
 
-class Image(BaseModel):
+class ImageAsset(BaseModel):
     path: str
     size: tuple[int, int]  # (width, height)
 
@@ -157,7 +157,7 @@ class RLEMask(BaseModel):
 class Annotation(BaseModel):
     label: int
     bbox: Optional[BoundingBox] = None
-    point: Optional[Point] = None
+    point: Optional[Point] = None # 2x list of positive and negative
     mask: Optional[RLEMask] = None
     source: Optional[str] = None
 
@@ -185,8 +185,8 @@ class Target(BaseModel):
 class VLMSample(BaseModel):
     sample_id: int
     dataset_id: str
-    query_image: Image
-    images: dict[str, Image] = Field(default_factory=dict)
+    #query_image: ImageAsset
+    images: dict[str, ImageAsset] = Field(default_factory=dict)
     messages: list[Message]
     target: Optional[Target] = None
     metadata: dict[str, Any] = Field(default_factory=dict)

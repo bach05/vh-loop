@@ -10,7 +10,7 @@ cuda = "12.8"
 
 # --- 1. GLOBAL BASE (Always Installed) ---
 [dependencies]
-python = "==3.13"
+python = "==3.13.12"
 pip = "*"
 
 [pypi-dependencies]

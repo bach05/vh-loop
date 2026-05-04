@@ -152,6 +152,7 @@ def build_config_from_yaml_and_cli(args: argparse.Namespace) -> CocoToCanonicalC
         "label_as_name": args.label_as_name,
         "skip_invalid_bboxes": args.skip_invalid_bboxes,
         "include_instance_metadata": args.include_instance_metadata,
+        "disable_pbar": args.disable_pbar,
     }
 
     for key, value in cli_overrides.items():
@@ -510,11 +511,16 @@ def convert_coco_image_to_sample(
         "record_type": "sample",
         "sample_id": sample_id,
         "dataset_id": dataset_id,
-        "query_image": {
-            "path": image["file_name"],
-            "size": [img_width, img_height],
+
+        # New schema:
+        # query image is stored inside images with key "query"
+        "images": {
+            "query": {
+                "path": image["file_name"],
+                "size": [img_width, img_height],
+            }
         },
-        "images": {},
+
         "messages": [
             {
                 "role": "user",

@@ -14,5 +14,7 @@ gradient_checkpointing: true #set to true to enable gradient checkpointing, whic
 
 logging_steps: 10 #log training progress every N steps, set to 0 to disable logging
 save_steps: 100 #save the model every N steps, set to 0 to disable
-eval_strategy: epoch #evaluation strategy, can be 'no', 'steps', or 'epoch'
-eval_steps: None #evaluate the model every N steps
+eval_strategy: "no" #evaluation strategy, can be 'no', 'steps', or 'epoch'
+eval_steps: 0 #evaluate the model every N steps
+
+max_length: null #max length of the input sequences, set to None to use the default max length of the model

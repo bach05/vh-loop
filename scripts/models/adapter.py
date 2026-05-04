@@ -13,7 +13,7 @@ class VLMAdapter(ABC):
         pass
 
     @abstractmethod
-    def build_collator(self, processor, cfg: dict):
+    def collate_fn(self, examples) -> dict:
         pass
 
     @abstractmethod

@@ -41,6 +41,122 @@ The data schema contains the base informative elements of the dataset. We use `V
     - `semantic_mask`: a semantic mask of the target objects
 - `metadata`: additional metadata about the sample, e.g. the source of the data, the date of collection, etc…
 
+### Schema Visualization 
+
+![Data Schema](./media/data_schema.png)
+
+<details>
+  <summary>Click to visualize mermaid source code</summary>
+
+```mermaid
+classDiagram
+    class DatasetInfoRecord {
+        record_type = "dataset_info"
+        schema_version: str
+        info: DatasetInfo
+    }
+
+    class DatasetInfo {
+        dataset_id: str
+        description: str?
+        annotation_source: str?
+        has_semantic_masks: bool
+        has_point: bool
+        has_bbox: bool
+        date_collected: str?
+        label_info: dict[str, str]
+    }
+
+    class SampleRecord {
+        record_type = "sample"
+        schema_version: str
+    }
+
+    class VLMSample {
+        sample_id: int
+        dataset_id: str
+        query_image: Image
+        images: dict[str, Image]
+        messages: list[Message]
+        target: Target?
+        metadata: dict[str, Any]
+    }
+
+    class ImageAsset {
+        path: str
+        size: tuple[int, int]
+        width: property
+        height: property
+    }
+
+    class Message {
+        role: "system" | "user" | "assistant"
+        content: list[MessageContent]
+    }
+
+    class TextContent {
+        type = "text"
+        text: str
+    }
+
+    class ImageContent {
+        type = "image"
+        image_id: str
+    }
+
+    class Target {
+        text: str?
+        instances: list[Annotation]
+    }
+
+    class Annotation {
+        label: int
+        bbox: BoundingBox?
+        point: Point?
+        mask: RLEMask?
+        source: str?
+    }
+
+    class BoundingBox {
+        tl: Point
+        br: Point
+        width: property
+        height: property
+        area()
+    }
+
+    class Point {
+        x: int
+        y: int
+        from_pixel()
+        to_pixel()
+    }
+
+    class RLEMask {
+        counts: list[int] | str
+        size: tuple[int, int]
+        to_binary_mask()
+        from_binary_mask()
+        centroid()
+    }
+
+    DatasetInfoRecord --> DatasetInfo
+    SampleRecord --|> VLMSample
+    VLMSample --> ImageAsset : query_image
+    VLMSample --> ImageAsset : images
+    VLMSample --> Message : messages
+    VLMSample --> Target : target
+    Message --> TextContent : content option
+    Message --> ImageContent : content option
+    Target --> Annotation
+    Annotation --> BoundingBox
+    Annotation --> Point
+    Annotation --> RLEMask
+    BoundingBox --> Point : tl
+    BoundingBox --> Point : br
+```
+</details>
+
 A dataset is stored in a JSONL file, where each line is a JSON object representing a `VLMSample`: 
 
 **TO BE FIXED**: draft definition.

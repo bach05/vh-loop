@@ -3,6 +3,32 @@
 from trl import SFTTrainer, SFTConfig
 from scripts.training.train_backend import TrainingBackend
 
+from dataclasses import fields
+from omegaconf import OmegaConf
+
+def build_sft_config(cfg, output_dir: str) -> SFTConfig:
+    valid_keys = {f.name for f in fields(SFTConfig)}
+
+    if hasattr(cfg, "__class__") and "omegaconf" in str(type(cfg)).lower():
+        cfg_dict = OmegaConf.to_container(cfg, resolve=True)
+    else:
+        cfg_dict = dict(cfg)
+
+    cfg_dict["output_dir"] = output_dir
+    cfg_dict["remove_unused_columns"] = False
+
+    sft_kwargs = {
+        k: v
+        for k, v in cfg_dict.items()
+        if k in valid_keys
+    }
+
+    unknown_keys = sorted(set(cfg_dict.keys()) - valid_keys)
+    if unknown_keys:
+        print(f"Ignoring non-SFTConfig keys: {unknown_keys}")
+
+    return SFTConfig(**sft_kwargs)
+
 class HFSFTBackend(TrainingBackend):
 
     def __init__(self, model, processor, cfg, peft_config = None) -> None:
@@ -18,20 +44,9 @@ class HFSFTBackend(TrainingBackend):
 
     def train(self, train_dataset, eval_dataset=None, collator=None):
 
-        training_args = SFTConfig(
+        training_args = build_sft_config(
+            cfg=self.cfg,
             output_dir=self.output_dir,
-            per_device_train_batch_size=self.cfg.per_device_train_batch_size,
-            gradient_accumulation_steps=self.cfg.gradient_accumulation_steps,
-            learning_rate=self.cfg.learning_rate,
-            num_train_epochs=self.cfg.num_train_epochs,
-            bf16=self.cfg.bf16,
-            fp16=self.cfg.fp16,
-            gradient_checkpointing=self.cfg.gradient_checkpointing,
-            logging_steps=self.cfg.logging_steps,
-            save_steps=self.cfg.save_steps,
-            eval_strategy=self.cfg.eval_strategy,
-            eval_steps=self.cfg.eval_steps,
-            remove_unused_columns=False,
         )
 
         self.trainer = SFTTrainer(
