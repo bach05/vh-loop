@@ -5,17 +5,17 @@ from scripts.core.registry import register_model_adapter
 from scripts.models.adapter import VLMAdapter
 from scripts.core.output_parsers import parse_out_text_json_objects_to_target
 
-@register_model_adapter("qwen3_5")
-class Qwen3_5Adapter(VLMAdapter):
+@register_model_adapter("gemma4")
+class Gemma4Adapter(VLMAdapter):
 
     def __init__(self, cfg, quantization_config=None):
-        from transformers import AutoProcessor, Qwen3_5ForConditionalGeneration
+        from transformers import  AutoProcessor, AutoModelForImageTextToText
 
         self.processor = AutoProcessor.from_pretrained(
             cfg["model_name_or_path"],
             trust_remote_code=cfg.get("trust_remote_code", True),
         )
-        self.model = Qwen3_5ForConditionalGeneration.from_pretrained(
+        self.model = AutoModelForImageTextToText.from_pretrained(
             cfg["model_name_or_path"],
             dtype=cfg.get("dtype", "auto"),
             device_map=cfg.get("device_map", "auto"),
@@ -51,7 +51,9 @@ class Qwen3_5Adapter(VLMAdapter):
         labels = batch["input_ids"].clone()
 
         labels[labels == self.processor.tokenizer.pad_token_id] = -100
+        labels[labels == self.processor.tokenizer.boi_token_id] = -100
         labels[labels == self.processor.tokenizer.image_token_id] = -100
+        labels[labels == self.processor.tokenizer.eoi_token_id] = -100
 
         batch["labels"] = labels
         return batch
@@ -59,25 +61,9 @@ class Qwen3_5Adapter(VLMAdapter):
     def get_peft_target_modules(self, cfg_lora=None):
 
         if cfg_lora is None:
-            return [
-                "q_proj",
-                "k_proj",
-                "v_proj",
-                "o_proj",
-                "gate_proj",
-                "up_proj",
-                "down_proj",
-            ]
+            return "all-linear"
         else:
-            return cfg_lora.get("target_modules", [
-                "q_proj",
-                "k_proj",
-                "v_proj",
-                "o_proj",
-                "gate_proj",
-                "up_proj",
-                "down_proj",
-            ])
+            return cfg_lora.get("target_modules", "all-linear")
 
     def parse_model_output(self, text):
         return parse_out_text_json_objects_to_target(text)

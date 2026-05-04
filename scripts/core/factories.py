@@ -1,10 +1,8 @@
 from __future__ import annotations
 
 from typing import Any, Dict, Mapping, Optional
-from omegaconf import OmegaConf
 
 import albumentations as A
-
 
 try:
     from albumentations.pytorch import ToTensorV2
@@ -13,6 +11,9 @@ except Exception:
 
 
 class TransformBuildError(RuntimeError):
+    pass
+
+class PeftConfigBuildError(RuntimeError):
     pass
 
 def build_transform(
@@ -67,3 +68,18 @@ def build_transform(
         aug_list.append(ToTensorV2())
 
     return A.Compose(aug_list, additional_targets=add_tgts)
+
+def build_peft_config(peft_cfg):
+    from peft import LoraConfig
+    from scripts.core.constants import SUPPORTED_PEFT_STRATEGIES
+
+    peft_config = None
+
+    if peft_cfg.strategy.lower() == "lora":
+        peft_config = LoraConfig(**peft_cfg.params)
+    else:
+        raise PeftConfigBuildError(f"Unknown PEFT strategy '{peft_cfg.strategy}'. Supported strategies: {SUPPORTED_PEFT_STRATEGIES}")
+
+    return peft_config
+
+

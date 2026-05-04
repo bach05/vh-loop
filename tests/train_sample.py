@@ -1,10 +1,9 @@
 import hydra
 from omegaconf import DictConfig, OmegaConf
-from scripts.core.transform_utils import build_transform
+from scripts.core.factories import build_transform, build_peft_config
 
-from scripts.models.qwen3_5_adapter import Qwen3_5Adapter
+from scripts.core.registry import get_model_adapter
 from scripts.training.backends.hf_trl import HFSFTBackend
-from peft import LoraConfig
 
 from scripts.data.hf_dataset import canonical_manifest_to_hf_sft, TransformedVLMHFDataset
 
@@ -28,22 +27,14 @@ def main(cfg: DictConfig) -> None:
     )
 
     #Model config
-    adapter = Qwen3_5Adapter(cfg.model)
-    model, processor = adapter.get_model_and_processor()
+    adapter = get_model_adapter(cfg.model.adapter, cfg=cfg.model.params)
 
     #Trainer config
 
-    lora_config = LoraConfig(
-        r=cfg.lora.rank_dimension,
-        lora_alpha=cfg.lora.lora_alpha,
-        lora_dropout=cfg.lora.dropout,
-        bias=cfg.lora.bias,
-        target_modules=adapter.get_lora_target_modules(cfg.lora),
-        task_type=cfg.lora.task_type,
-    )
+    peft_config = build_peft_config(cfg.peft)
 
-    trainer = HFSFTBackend(model, processor, cfg.trainer, peft_config=lora_config)
-    trainer.train(train_dataset=train_dataset)
+    trainer = HFSFTBackend(adapter, cfg.trainer, peft_config=peft_config)
+    trainer.train(train_dataset=train_dataset, collator=adapter.collate_fn)
 
 if __name__ == "__main__":
     main()

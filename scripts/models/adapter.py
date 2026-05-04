@@ -17,7 +17,7 @@ class VLMAdapter(ABC):
         pass
 
     @abstractmethod
-    def get_lora_target_modules(self, cfg: dict) -> list[str]:
+    def get_peft_target_modules(self, cfg: dict = None) -> list[str]:
         pass
 
     @abstractmethod

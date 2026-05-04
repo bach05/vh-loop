@@ -1,7 +1,8 @@
 # src/training/backends/hf_trl.py
-
+from pygments.lexers import ada
 from trl import SFTTrainer, SFTConfig
 from scripts.training.train_backend import TrainingBackend
+from scripts.models.adapter import VLMAdapter
 
 from dataclasses import fields
 from omegaconf import OmegaConf
@@ -31,16 +32,17 @@ def build_sft_config(cfg, output_dir: str) -> SFTConfig:
 
 class HFSFTBackend(TrainingBackend):
 
-    def __init__(self, model, processor, cfg, peft_config = None) -> None:
+    def __init__(self, adapter: VLMAdapter, cfg, peft_config = None) -> None:
 
-        self.model = model
-        self.processor = processor
+        self.model, self.processor = adapter.get_model_and_processor()
         self.peft_config = peft_config
+
+        peft_target_modules = adapter.get_peft_target_modules()
+        if peft_target_modules is not None and peft_config is not None:
+            self.peft_config.target_modules = peft_target_modules
 
         self.cfg = cfg
         self.output_dir = './outputs'
-
-
 
     def train(self, train_dataset, eval_dataset=None, collator=None):
 

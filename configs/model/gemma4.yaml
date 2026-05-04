@@ -1,6 +1,6 @@
-adapter: 'qwen3_5'
+adapter: 'gemma4'
 params:
-  model_name_or_path: 'Qwen/Qwen3.5-2B'
+  model_name_or_path: 'google/gemma-4-E2B-it'
   dtype: 'auto'
   device_map: 'auto'
   trust_remote_code: true

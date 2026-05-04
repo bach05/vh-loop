@@ -1,0 +1,9 @@
+strategy: LORA #the type of PEFT method, can be LORA, ADALORA, or PROMPT_TUNING
+params:
+  task_type: CAUSAL_LM #the type of the task, can be CAUSAL_LM, SEQ2SEQ_LM, or OTHER
+  r: 8
+  lora_alpha: 16
+  lora_dropout: 0.1
+  bias: "none" #can be "none", "all", or "lora_only"
+  modules_to_save: ["lm_head", "embed_tokens"]
+  ensure_weight_tying: True

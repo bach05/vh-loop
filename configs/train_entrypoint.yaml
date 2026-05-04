@@ -1,10 +1,10 @@
 defaults:
-  - /model: qwen3_5
+  - /model: qwen3_5 # qwen3_5, gemma4
   - /experiment: test_exp
   #- /dataset: coupled_camera_paniz_train
   - /transform: paniz_s1000
-  - /lora: lora
-  - /trainer: sft_trainer
+  - /peft: lora
+  - /trainer: qwen_sft_trainer # gemma4_sft_trainer, qwen_sft_trainer
   - _self_
 
 #run_id: gemma_ba_test #additional info to distinguish different runs, e.g., model name, dataset name, etc.
