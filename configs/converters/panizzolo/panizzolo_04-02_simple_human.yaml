@@ -17,7 +17,3 @@ drop_empty: false
 # null means keep all categories.
 # Otherwise use, for example: [1, 2]
 include_categories: null
-
-# false means store label as original COCO category id.
-# true means store label as category name.
-label_as_name: false

@@ -157,7 +157,8 @@ class RLEMask(BaseModel):
 class Annotation(BaseModel):
     label: int
     bbox: Optional[BoundingBox] = None
-    point: Optional[Point] = None # 2x list of positive and negative
+    pos_points: Optional[list[Point]] = None
+    neg_points: Optional[list[Point]] = None
     mask: Optional[RLEMask] = None
     source: Optional[str] = None
 
@@ -174,7 +175,7 @@ class Annotation(BaseModel):
                 int(xs.max()) + 1, int(ys.max()) + 1,
                 img_width=w, img_height=h,
             )
-        return cls(label=label, bbox=bbox, point=centroid, mask=rle_mask)
+        return cls(label=label, bbox=bbox, pos_points=[centroid], mask=rle_mask)
 
 
 class Target(BaseModel):
