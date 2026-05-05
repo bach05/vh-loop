@@ -2,6 +2,7 @@
 from pygments.lexers import ada
 from trl import SFTTrainer, SFTConfig
 from scripts.training.train_backend import TrainingBackend
+from scripts.training.backends.debug_sft_trainer import OOMDebugSFTTrainer
 from scripts.models.adapter import VLMAdapter
 
 from dataclasses import fields
@@ -44,22 +45,33 @@ class HFSFTBackend(TrainingBackend):
         self.cfg = cfg
         self.output_dir = './outputs'
 
-    def train(self, train_dataset, eval_dataset=None, collator=None):
+    def train(self, train_dataset, eval_dataset=None, collator=None, debug=False):
 
         training_args = build_sft_config(
             cfg=self.cfg,
             output_dir=self.output_dir,
         )
 
-        self.trainer = SFTTrainer(
-            model=self.model,
-            args=training_args,
-            train_dataset=train_dataset,
-            eval_dataset=eval_dataset,
-            processing_class=self.processor,
-            peft_config=self.peft_config,
-            data_collator=collator,
-        )
+        if debug:
+            self.trainer = OOMDebugSFTTrainer(
+                model=self.model,
+                args=training_args,
+                train_dataset=train_dataset,
+                eval_dataset=eval_dataset,
+                processing_class=self.processor,
+                peft_config=self.peft_config,
+                data_collator=collator,
+            )
+        else:
+            self.trainer = SFTTrainer(
+                model=self.model,
+                args=training_args,
+                train_dataset=train_dataset,
+                eval_dataset=eval_dataset,
+                processing_class=self.processor,
+                peft_config=self.peft_config,
+                data_collator=collator,
+            )
 
         self.trainer.train()
 

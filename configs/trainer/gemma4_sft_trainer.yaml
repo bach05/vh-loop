@@ -15,7 +15,7 @@ assistant_only_loss: false #Whether to compute loss only on the assistant part o
 completion_only_loss: true #for prompt-completion style datasets, whether to compute loss only on the completion part of the sequence. If set to False, loss is computed on the entire sequence.
 use_liger_kernel: false # lieger kernel can speed up training on compatible hardware, set to false to disable it.
 
-max_length: null #max length of the input sequences, set to None to use the default max length of the model. With images, only use max_length when you’ve verified that truncation won’t remove image tokens for the entire dataset.
+max_length: null #max length of the input sequences, set to None. With images, only use max_length when you’ve verified that truncation won’t remove image tokens for the entire dataset.
 dataset_text_field: ""
 dataset_kwargs:
     skip_prepare_dataset: True #if true, True, the SFTTrainer assumes your dataset is already tokenized and formatted with the necessary columns (like input_ids, attention_mask, and labels), so it won't attempt to apply its own formatting_func

@@ -16,6 +16,9 @@ def main(cfg: DictConfig) -> None:
     #log level
     logging.getLogger("httpx").setLevel(logging.WARNING)
 
+    if cfg.debug:
+        logging.warning("*******************\n*** Debug mode is ON ***\n*******************")
+
     #Load data
 
     train_dataset = build_hf_datasets(cfg.dataset, transform_cfg=cfg.transform, split='training')
@@ -38,7 +41,7 @@ def main(cfg: DictConfig) -> None:
     peft_config = build_peft_config(cfg.peft)
 
     trainer = HFSFTBackend(adapter, cfg.trainer, peft_config=peft_config)
-    trainer.train(train_dataset=train_dataset, eval_dataset=valid_dataset, collator=None)
+    trainer.train(train_dataset=train_dataset, eval_dataset=valid_dataset, collator=None, debug=cfg.debug)
 
 if __name__ == "__main__":
     main()
