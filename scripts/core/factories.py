@@ -1,19 +1,23 @@
 from __future__ import annotations
 
 from typing import Any, Dict, Mapping, Optional
+import logging
 
 import albumentations as A
+from omegaconf import OmegaConf as OC
 
 try:
     from albumentations.pytorch import ToTensorV2
 except Exception:
     ToTensorV2 = None
 
-
 class TransformBuildError(RuntimeError):
     pass
 
 class PeftConfigBuildError(RuntimeError):
+    pass
+
+class DatasetBuildError(RuntimeError):
     pass
 
 def build_transform(
@@ -76,10 +80,60 @@ def build_peft_config(peft_cfg):
     peft_config = None
 
     if peft_cfg.strategy.lower() == "lora":
-        peft_config = LoraConfig(**peft_cfg.params)
+        params = OC.to_container(peft_cfg.params, resolve=True) if peft_cfg.params else None
+        peft_config = LoraConfig(**params)
     else:
         raise PeftConfigBuildError(f"Unknown PEFT strategy '{peft_cfg.strategy}'. Supported strategies: {SUPPORTED_PEFT_STRATEGIES}")
 
     return peft_config
+
+
+def build_hf_datasets(dataset_cfg, transform_cfg=None, split='training'):
+    from scripts.data.hf_dataset import canonical_manifest_to_hf_sft, TransformedVLMHFDataset
+    from datasets import concatenate_datasets
+
+    logging.info(f"Building HF dataset for data split '{split}'")
+
+    data_sets = []
+    for data_cfg in dataset_cfg.get(split, []):
+        dataset_schema = data_cfg.get("dataset_schema", "conversational")
+        data_jsonl_path = data_cfg.get("jsonl_path", None)
+        if data_jsonl_path is None:
+            raise DatasetBuildError(f"Dataset '{data_cfg.get('id', None)}' is missing required 'jsonl_path' field.")
+
+        dataset_root = data_cfg.get("root_override", None)
+
+        logging.info(
+            f"Building HF dataset for '{data_cfg.get('id', None)}' "
+            f"from: {data_jsonl_path}, schema={dataset_schema}"
+        )
+
+        dataset_hf = canonical_manifest_to_hf_sft(
+            data_jsonl_path,
+            dataset_schema=dataset_schema,
+            dataset_root=dataset_root,
+            cache_dir=data_cfg.get("hf_cache_dir", None),
+            fingerprint_extra={
+                "dataset_id": data_cfg.get("id", None),
+                "split": split,
+            },
+        )
+        data_sets.append(dataset_hf)
+
+    data_set = concatenate_datasets(data_sets) if len(data_sets) > 1 else (data_sets[0] if data_sets else None)
+    if data_set is None:
+        raise DatasetBuildError(f"No datasets specified in config under 'dataset.{split}'.")
+
+    if transform_cfg is not None:
+        image_transforms = build_transform(transform_cfg)
+        data_set = TransformedVLMHFDataset(
+            data_set,
+            transform=image_transforms,
+        )
+
+    return data_set
+
+
+
 
 

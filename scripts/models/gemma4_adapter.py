@@ -1,28 +1,40 @@
 # scripts/models/qwen_3_5_adapter.py
-
+from omegaconf import OmegaConf
 from scripts.core.registry import register_model_adapter
 
 from scripts.models.adapter import VLMAdapter
 from scripts.core.output_parsers import parse_out_text_json_objects_to_target
+from torch import bfloat16 as bf16
 
 @register_model_adapter("gemma4")
 class Gemma4Adapter(VLMAdapter):
 
-    def __init__(self, cfg, quantization_config=None):
+    def __init__(self, model_cfg, quantization_config=None):
         from transformers import  AutoProcessor, AutoModelForImageTextToText
 
         self.processor = AutoProcessor.from_pretrained(
-            cfg["model_name_or_path"],
-            trust_remote_code=cfg.get("trust_remote_code", True),
+            model_cfg["model_name_or_path"],
+            trust_remote_code=model_cfg.get("trust_remote_code", True),
         )
+
+        model_params = model_cfg.get("model_params", {})
+
+        model_params = OmegaConf.to_container(model_params)
+
+        if quantization_config is not None:
+            quantization_config = OmegaConf.to_container(quantization_config)
+            quantization_config['bnb_4bit_compute_dtype'] = model_params['dtype'] if 'dtype' in model_params else bf16
+            quantization_config['bnb_4bit_quant_storage'] = model_params['dtype'] if 'dtype' in model_params else bf16
+
+        #add quantization config in model_params
+        model_params["quantization_config"] = quantization_config
+
         self.model = AutoModelForImageTextToText.from_pretrained(
-            cfg["model_name_or_path"],
-            dtype=cfg.get("dtype", "auto"),
-            device_map=cfg.get("device_map", "auto"),
-            quantization_config=quantization_config,
-            trust_remote_code=cfg.get("trust_remote_code", True),
+            model_cfg["model_name_or_path"],
+            **model_params,
         )
-        self.cfg = cfg
+
+        self.cfg = model_cfg
 
     def get_model_and_processor(self):
         return self.model, self.processor

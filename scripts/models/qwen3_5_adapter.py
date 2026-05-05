@@ -4,6 +4,7 @@ from scripts.core.registry import register_model_adapter
 
 from scripts.models.adapter import VLMAdapter
 from scripts.core.output_parsers import parse_out_text_json_objects_to_target
+from torch import bfloat16 as bf16
 
 @register_model_adapter("qwen3_5")
 class Qwen3_5Adapter(VLMAdapter):
@@ -15,12 +16,19 @@ class Qwen3_5Adapter(VLMAdapter):
             cfg["model_name_or_path"],
             trust_remote_code=cfg.get("trust_remote_code", True),
         )
+        model_params = cfg.get("model_params", {})
+
+        if quantization_config is not None:
+            quantization_config.bnb_4bit_compute_dtype = model_params[
+                'dtype'] if 'dtype' in model_params else bf16
+            quantization_config.bnb_4bit_quant_storage = model_params[
+                'dtype'] if 'dtype' in model_params else bf16
+
+        model_params['quantization_config'] = quantization_config
+
         self.model = Qwen3_5ForConditionalGeneration.from_pretrained(
             cfg["model_name_or_path"],
-            dtype=cfg.get("dtype", "auto"),
-            device_map=cfg.get("device_map", "auto"),
-            quantization_config=quantization_config,
-            trust_remote_code=cfg.get("trust_remote_code", True),
+            **model_params,
         )
         self.cfg = cfg
 

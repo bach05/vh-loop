@@ -8,11 +8,12 @@ from scripts.data.manifest_utils import iter_vlm_samples_from_manifest
 from pathlib import Path
 from PIL import Image
 from torch.utils.data import Dataset
+from scripts.core.constants import SUPPORTED_DATASET_SCHEMAS, SFT_CONVERTER_VERSION
 
 import numpy as np
 
 #Convert VLMSample to a conversation
-def sample_to_messages(sample: VLMSample, dataset_root: str = None) -> (int, list[dict[str, Any]]):
+def sample_to_messages(sample: VLMSample, dataset_schema: str = 'conversational', dataset_root: str = None) -> (int, list[dict[str, Any]]):
 
     messages = []
     images = []
@@ -62,52 +63,114 @@ def sample_to_messages(sample: VLMSample, dataset_root: str = None) -> (int, lis
             }
         )
 
-    #Add target
-    messages.append(
-        {
-            "role": "assistant",
-            "content": [
-                {
-                    "type": "text",
-                    "text": sample.target.text,
-                }
-            ],
-        }
-    )
+    if dataset_schema == 'conversational':
+        #Add target
+        messages.append(
+            {
+                "role": "assistant",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": sample.target.text,
+                    }
+                ],
+            }
+        )
 
-    ret_dict = \
-    {
-        "messages": messages,
-        "images": images,
-    }
+        ret_dict = \
+        {
+            "messages": messages,
+            "images": images,
+        }
+    elif dataset_schema == 'prompt-completion':
+
+        completions = [
+            {
+                "role": "assistant",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": sample.target.text,
+                    }
+                ],
+            }
+        ]
+
+        ret_dict = \
+            {
+                "prompt": messages,
+                "completion": completions,
+                "images": images,
+            }
+    else:
+        raise ValueError(f"Unsupported dataset schema: {dataset_schema}, supported schemas: {SUPPORTED_DATASET_SCHEMAS}")
 
     return ret_dict
 
 
-def iter_sft_rows_from_manifest(manifest_path, dataset_root=None):
+def iter_sft_rows_from_manifest(manifest_path, dataset_schema='conversational', dataset_root=None):
 
     for sample in iter_vlm_samples_from_manifest(
         manifest_path,
         attach_dataset_info=False,
     ):
-        yield sample_to_messages(sample, dataset_root)
+        yield sample_to_messages(sample, dataset_schema=dataset_schema, dataset_root=dataset_root)
 
 
-def manifest_fingerprint(manifest_path: str | Path) -> str:
+
+def manifest_fingerprint(
+    manifest_path: str | Path,
+    dataset_schema: str = "conversational",
+    dataset_root: Optional[str | Path] = None,
+    *,
+    converter_version: str = SFT_CONVERTER_VERSION,
+    extra: Optional[dict] = None,
+) -> str:
     path = Path(manifest_path)
     stat = path.stat()
 
-    raw = f"{path.resolve()}:{stat.st_mtime_ns}:{stat.st_size}:sft-v1"
+    import json
+
+    payload = {
+        # Data source identity
+        "manifest_path": str(path.resolve()),
+        "manifest_mtime_ns": stat.st_mtime_ns,
+        "manifest_size": stat.st_size,
+
+        # Conversion options that change generated rows
+        "dataset_schema": dataset_schema,
+        "dataset_root": str(Path(dataset_root).resolve()) if dataset_root is not None else None,
+
+        # Manual invalidation when sample_to_messages / parsing logic changes
+        "converter_version": converter_version,
+
+        # Optional project/config-specific invalidation
+        "extra": extra or {},
+    }
+
+    raw = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str)
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]
 
 
 def canonical_manifest_to_hf_sft(
     manifest_path: str | Path,
-    dataset_root: str | Path = None,
+    dataset_schema: str = 'conversational',
+    dataset_root: Optional[str] | Optional[Path] = None,
+    cache_dir: Optional[str | Path] = None,
+    fingerprint_extra: Optional[dict] = None,
 ) -> HFDataset:
+
+    fingerprint = manifest_fingerprint(
+        manifest_path=manifest_path,
+        dataset_schema=dataset_schema,
+        dataset_root=dataset_root,
+        extra=fingerprint_extra,
+    )
+
     return HFDataset.from_generator(
-        lambda: iter_sft_rows_from_manifest(manifest_path, dataset_root),
-        fingerprint=manifest_fingerprint(manifest_path), #guarantee to recompute the dataset when path changes or file is updated
+        lambda: iter_sft_rows_from_manifest(manifest_path, dataset_schema=dataset_schema, dataset_root=dataset_root),
+        fingerprint=fingerprint, #guarantee to recompute the dataset when path changes or file is updated
+        cache_dir=str(cache_dir) if cache_dir is not None else None,
     )
 
 def _apply_transform(transform: Optional[Callable], img: np.ndarray):

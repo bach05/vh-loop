@@ -1,7 +1,8 @@
 adapter: 'qwen3_5'
 params:
   model_name_or_path: 'Qwen/Qwen3.5-2B'
-  dtype: 'auto'
-  device_map: 'auto'
-  trust_remote_code: true
+  model_params:
+    dtype: 'bfloat16'
+    device_map: 'auto'
+    trust_remote_code: true
 

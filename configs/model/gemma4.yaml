@@ -1,7 +1,8 @@
 adapter: 'gemma4'
 params:
   model_name_or_path: 'google/gemma-4-E2B-it'
-  dtype: 'auto'
-  device_map: 'auto'
-  trust_remote_code: true
+  model_params:
+    dtype: 'bfloat16'
+    device_map: 'auto'
+    trust_remote_code: true
 

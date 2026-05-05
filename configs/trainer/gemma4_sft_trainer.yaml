@@ -1,28 +1,44 @@
+#batching
 per_device_train_batch_size: 2
 gradient_accumulation_steps: 2
 
+#
 learning_rate: 2e-4
 weight_decay: 0.01
 optim: adamw_torch_fused #optimizer to use, can be 'adamw_torch_fused', 'adamw_torch', 'adamw_apex_fused', 'adamw_apex', or any other optimizer supported by the training framework. The 'fused' versions can be faster on compatible hardware.
 max_grad_norm: 0.3 #max gradient norm for gradient clipping, set to 0 to disable gradient clipping
 lr_scheduler_type: "constant" #learning rate scheduler type, can be 'linear', 'cosine', 'cosine_with_restarts', 'polynomial', 'constant', or 'constant_with_warmup'
 
+loss_type: "nll" #ype of loss to use. Possible values are "nll" (negative log-likelihood, default) and "dft" (Dynamic Fine-Tuning)
+packing: false #Whether to group multiple sequences into fixed-length blocks to improve computational efficiency and reduce padding. Uses max_length to define sequence length.
+assistant_only_loss: false #Whether to compute loss only on the assistant part of the sequence. If set to True, loss is computed only on the assistant responses
+completion_only_loss: true #for prompt-completion style datasets, whether to compute loss only on the completion part of the sequence. If set to False, loss is computed on the entire sequence.
+use_liger_kernel: false # lieger kernel can speed up training on compatible hardware, set to false to disable it.
+
+max_length: null #max length of the input sequences, set to None to use the default max length of the model. With images, only use max_length when you’ve verified that truncation won’t remove image tokens for the entire dataset.
+dataset_text_field: ""
+dataset_kwargs:
+    skip_prepare_dataset: True #if true, True, the SFTTrainer assumes your dataset is already tokenized and formatted with the necessary columns (like input_ids, attention_mask, and labels), so it won't attempt to apply its own formatting_func
+remove_unused_columns: false #set to true to remove columns from the dataset that are not used by the model's forward method, which can save memory and speed up training. Set to false to keep all columns in the dataset.
+
 num_train_epochs: 3
-max_train_steps: -1 #set to -1 to disable max train steps, otherwise it will override num_train_epochs
+max_steps: -1 #set to -1 to disable max train steps, otherwise it will override num_train_epochs
 
 bf16: true #set to true to use bf16 precision, which can speed up training and reduce memory usage on compatible hardware. Set to false to use fp16 or fp32 precision depending on the model and hardware capabilities.
 fp16: false #set to true to use fp16 precision, which can speed up training and reduce memory usage on compatible hardware. Set to false to use bf16 or fp32 precision depending on the model and hardware capabilities.
 
 gradient_checkpointing: true #set to true to enable gradient checkpointing, which can reduce memory usage during training by trading off computation. Set to false to disable it.
 
-logging_steps: 10 #log training progress every N steps, set to 0 to disable logging
-save_steps: 100 #save the model every N steps, set to 0 to disable
+#log ang saving
+logging_steps: 100 #log training progress every N steps, set to 0 to disable logging
 
-eval_strategy: "no" #evaluation strategy, can be 'no', 'steps', or 'epoch'
+eval_strategy: "epoch" #evaluation strategy, can be 'no', 'steps', or 'epoch'
 eval_steps: 0 #evaluate the model every N steps
+save_strategy: "epoch" #save strategy, can be 'no', 'steps', or 'epoch'
+save_steps: 0 #save the model every N steps, set to 0 to disable
 
-max_length: null #max length of the input sequences, set to None to use the default max length of the model
-dataset_text_field: ""
-dataset_kwargs:
-    skip_prepare_dataset: True #if true, True, the SFTTrainer assumes your dataset is already tokenized and formatted with the necessary columns (like input_ids, attention_mask, and labels), so it won't attempt to apply its own formatting_func
-remove_unused_columns: false #set to true to remove columns from the dataset that are not used by the model's forward method, which can save memory and speed up training. Set to false to keep all columns in the dataset.
+metric_for_best_model: "loss" #metric to use for selecting the best model
+greater_is_better: false #whether the metric_for_best_model should be maximized or minimized, set to true if it should be maximized (e.g., accuracy), or false if it should be minimized (e.g., loss)
+
+save_total_limit: 1 #maximum number of checkpoints to store, set to 0 to store all checkpoints
+load_best_model_at_end: true #whether to load (and save) the best model found during training at the end of training, based on the evaluation metric specified by metric_for_best_model

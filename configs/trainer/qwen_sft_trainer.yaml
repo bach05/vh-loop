@@ -8,7 +8,7 @@ max_grad_norm: 0.3 #max gradient norm for gradient clipping, set to 0 to disable
 lr_scheduler_type: "constant" #learning rate scheduler type, can be 'linear', 'cosine', 'cosine_with_restarts', 'polynomial', 'constant', or 'constant_with_warmup'
 
 num_train_epochs: 3
-max_train_steps: -1 #set to -1 to disable max train steps, otherwise it will override num_train_epochs
+max_steps: -1 #set to -1 to disable max train steps, otherwise it will override num_train_epochs
 
 bf16: true #set to true to use bf16 precision, which can speed up training and reduce memory usage on compatible hardware. Set to false to use fp16 or fp32 precision depending on the model and hardware capabilities.
 fp16: false #set to true to use fp16 precision, which can speed up training and reduce memory usage on compatible hardware. Set to false to use bf16 or fp32 precision depending on the model and hardware capabilities.
