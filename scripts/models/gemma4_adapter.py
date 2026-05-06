@@ -1,4 +1,4 @@
-# scripts/models/qwen_3_5_adapter.py
+# scripts/models/gemma4_adapter.py
 from omegaconf import OmegaConf
 from scripts.core.registry import register_model_adapter
 
@@ -16,6 +16,10 @@ class Gemma4Adapter(VLMAdapter):
             model_cfg["model_name_or_path"],
             trust_remote_code=model_cfg.get("trust_remote_code", True),
         )
+
+        processor_params = model_cfg.get("processor_params", {})
+        if "max_soft_tokens" in processor_params:
+            self.processor.image_processor.max_soft_tokens = processor_params["max_soft_tokens"]
 
         model_params = model_cfg.get("model_params", {})
 

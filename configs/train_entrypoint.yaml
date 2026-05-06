@@ -1,11 +1,11 @@
 defaults:
-  - /model: gemma4 # qwen3_5, gemma4
+  - /model: qwen3_5 # qwen3_5, gemma4
   - /experiment: test_exp
   - /dataset: panizzolo
   - /transform: paniz_s1000
   - /peft: lora
-  - /trainer: gemma4_sft_trainer # gemma4_sft_trainer, qwen_sft_trainer
-  - /quantization: 4bit # 4bit, 8bit, null
+  - /trainer: qwen_sft_trainer # gemma4_sft_trainer, qwen_sft_trainer
+  - /quantization: null # 4bit, 8bit, null
   - _self_
 
 #run_id: gemma_ba_test #additional info to distinguish different runs, e.g., model name, dataset name, etc.
@@ -17,3 +17,9 @@ debug: true #when set to true, the code will run in debug mode, which may includ
 #save_every: 100 #save the intermediate results every N iterations, set to 0 to disable saving
 #
 #task: labelling #ident
+
+exp_name: "${hydra:runtime.choices.model}_${hydra:runtime.choices.dataset}_${hydra:runtime.choices.peft}${strip_null:${hydra:runtime.choices.quantization}}"
+
+hydra:
+  run:
+    dir: ${oc.env:MODEL_PATH, /models}/vhloop/training/${exp_name}

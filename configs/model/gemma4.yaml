@@ -5,4 +5,9 @@ params:
     dtype: 'bfloat16'
     device_map: 'auto'
     trust_remote_code: true
+    attn_implementation:
+      sliding_attention: "flash_attention_2"
+      full_attention: "sdpa"
+  processor_params:
+    max_soft_tokens: 280 #70, 140, 280, 560, or 1120 tokens, higher values preserve fine details but consumes more memory
 

@@ -1,5 +1,6 @@
 import hydra
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import OmegaConf, DictConfig
+from hydra.core.hydra_config import HydraConfig
 import os
 from scripts.core.factories import build_peft_config, build_hf_datasets
 from scripts.core.factories import DatasetBuildError
@@ -10,6 +11,11 @@ from scripts.training.backends.hf_trl import HFSFTBackend
 
 import logging
 
+OmegaConf.register_new_resolver(
+    "strip_null",
+    lambda val: f"_{val}" if val is not None else ""
+)
+
 @hydra.main(version_base=None, config_path="../configs", config_name="train_entrypoint")
 def main(cfg: DictConfig) -> None:
 
@@ -17,7 +23,14 @@ def main(cfg: DictConfig) -> None:
     logging.getLogger("httpx").setLevel(logging.WARNING)
 
     if cfg.debug:
-        logging.warning("*******************\n*** Debug mode is ON ***\n*******************")
+        logging.warning("\n***********************\n*** Debug mode is ON ***\n***********************")
+
+    # output dir
+    hydra_cfg = HydraConfig.get()
+    out_dir = hydra_cfg.run.dir
+    if not os.path.exists(out_dir):
+        os.makedirs(out_dir)
+    logging.info(f"Output directory: {out_dir}")
 
     #Load data
 
@@ -25,7 +38,7 @@ def main(cfg: DictConfig) -> None:
     try:
         valid_dataset = build_hf_datasets(cfg.dataset, transform_cfg=cfg.transform, split='validation')
     except DatasetBuildError as e:
-        logging.error(f"Validation dataset not found or failed to build: {e}, splitting train dataset..")
+        logging.warning(f"Validation dataset not found or failed to build: {e} Splitting train dataset..")
         train_dataset, valid_dataset = train_val_split(train_dataset)
 
     logging.info(f"Train dataset size: {len(train_dataset)}")
@@ -40,8 +53,14 @@ def main(cfg: DictConfig) -> None:
     #Trainer config
     peft_config = build_peft_config(cfg.peft)
 
-    trainer = HFSFTBackend(adapter, cfg.trainer, peft_config=peft_config)
-    trainer.train(train_dataset=train_dataset, eval_dataset=valid_dataset, collator=None, debug=cfg.debug)
+    trainer = HFSFTBackend(adapter, cfg.trainer, peft_config=peft_config, out_dir=out_dir)
+    trainer.setup_trainer(train_dataset=train_dataset, eval_dataset=valid_dataset, collator=None, debug=cfg.debug)
+
+    # if cfg.debug:
+    #     trainer.compute_dataset_statistics(train_dataset, split_name='train', max_samples=500, batch_size=cfg.trainer.per_device_train_batch_size)
+
+    logging.info("\n***********************\n*** Starting Training ***\n***********************")
+    trainer.train()
 
 if __name__ == "__main__":
     main()

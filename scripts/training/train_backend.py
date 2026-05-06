@@ -4,6 +4,11 @@ from abc import ABC, abstractmethod
 
 
 class TrainingBackend(ABC):
+
     @abstractmethod
-    def train(self, train_dataset, eval_dataset=None, collator=None):
+    def setup_trainer(self, train_dataset, eval_dataset=None, collator=None, debug=False):
+        pass
+
+    @abstractmethod
+    def train(self):
         pass
