@@ -480,10 +480,6 @@ def render_sample_grid(
         logging.warning(f"Cannot visualize sample {sample_id}: image not found: {image_path}")
         return
 
-    if sample_id == 6:
-        matplotlib.use("TkAgg")
-        print("deubug")
-
     img = Image.open(image_path).convert("RGB")
     img_w, img_h = img.size
 

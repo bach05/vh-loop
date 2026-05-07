@@ -282,11 +282,11 @@ def normalize_xyxy(
     Normalize pixel xyxy box into canonical NORM_SIZExNORM_SIZE coordinate space.
 
     Convention:
-        scale_x = img_width / NORM_SIZE
-        scale_y = img_height / NORM_SIZE
+            scale_x = NORM_SIZE / img_width
+            scale_y = NORM_SIZE / img_height
     """
-    scale_x = img_width / NORM_SIZE
-    scale_y = img_height / NORM_SIZE
+    scale_x = NORM_SIZE / img_width
+    scale_y = NORM_SIZE / img_height
 
     norm = [
         round(x1 * scale_x),

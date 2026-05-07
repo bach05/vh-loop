@@ -17,7 +17,7 @@ max_debug_samples: 32 #number of iterations to run in debug mode, only effective
 #save_every: 100 #save the intermediate results every N iterations, set to 0 to disable saving
 #
 #task: labelling #ident
-use_adapter: false #whether to load the fine-tuned adapter
+use_adapter: true #whether to load the fine-tuned adapter
 
 exp_name: "${hydra:runtime.choices.model}_${hydra:runtime.choices.dataset}${strip_null:${hydra:runtime.choices.peft}}${strip_null:${hydra:runtime.choices.quantization}}"
 
