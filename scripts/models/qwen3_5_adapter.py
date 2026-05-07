@@ -92,5 +92,3 @@ class Qwen3_5Adapter(VLMAdapter):
                 "down_proj",
             ])
 
-    def parse_model_output(self, text):
-        return parse_out_text_json_objects_to_target(text)

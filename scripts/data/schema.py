@@ -7,6 +7,34 @@ import numpy as np
 
 from scripts.core.constants import NORM_SIZE
 
+"""
+Image reference frame convention.
+
+We use the standard image coordinate frame used by PIL/OpenCV:
+
+    (0, 0) ----------------------> x
+      |                            width direction
+      |
+      |      tl +-------------+
+      |         |             |
+      |         |             |
+      |         +-------------+ br
+      |
+      v
+      y
+    height direction
+
+Coordinate conventions:
+- Pixel coordinates are expressed as (x, y).
+- x increases from left to right.
+- y increases from top to bottom.
+- PIL.Image.size is (width, height).
+- NumPy/OpenCV image.shape[:2] is (height, width).
+- BoundingBox.tl is the top-left corner.
+- BoundingBox.br is the bottom-right corner.
+- BoundingBox.br should be interpreted as an exclusive corner, i.e. [tl, br).
+"""
+
 # Classes to represente the header of the dataset on the first line
 class DatasetInfo(BaseModel):
     dataset_id: str
@@ -40,7 +68,7 @@ class ImageAsset(BaseModel):
 
 
 class Point(BaseModel):
-    """ A 2-D point stored in normalized 1000×1000 coordinate space.
+    """ A 2-D point stored in normalized NORM_SIZE×NORM_SIZE coordinate space.
         from_pixel(): build from raw pixel coordinates.
         to_pixel(): recover pixel coordinates for rendering. """
 
@@ -49,22 +77,34 @@ class Point(BaseModel):
 
     @classmethod
     def from_pixel(cls, x: int, y: int, img_width: int, img_height: int) -> "Point":
-        """Normalize a pixel coordinate using a 1000×1000 square space."""
-        scale = NORM_SIZE / max(img_width, img_height)
-        return cls(x=round(x * scale), y=round(y * scale))
+        """Normalize a pixel coordinate using a NORM_SIZE×NORM_SIZE square space."""
+        #scale = NORM_SIZE / max(img_width, img_height)
+        scale_x = NORM_SIZE / img_width
+        scale_y = NORM_SIZE / img_height
+        return cls(x=round(x * scale_x), y=round(y * scale_y))
 
     def to_pixel(self, img_width: int, img_height: int) -> tuple[int, int]:
         """Denormalize to pixel coordinates of an image with the given dimensions."""
-        scale = max(img_width, img_height) / NORM_SIZE
-        return round(self.x * scale), round(self.y * scale)
+        #scale = max(img_width, img_height) / NORM_SIZE #suppose squared images
+        scale_x = img_width / NORM_SIZE
+        scale_y = img_height / NORM_SIZE
+        return round(self.x * scale_x), round(self.y * scale_y)
 
 
 class BoundingBox(BaseModel):
-    """ Axis-aligned bounding box stored in normalized 1000×1000 coordinate space.
-        tl= top-left corner, br= bottom-right corner.
-        from_pixel(): build from raw pixel coordinates.
-        to_pixel(): recover pixel corners for rendering.
-        area(): compute bounding box area. """
+    """Axis-aligned bounding box in normalized image coordinates.
+
+    Convention:
+    - tl is the top-left corner.
+    - br is the bottom-right corner.
+    - br is exclusive: the bbox covers [tl.x, br.x) and [tl.y, br.y).
+    - Coordinates are normalized independently:
+        x_pixel = x_norm / NORM_SIZE * image_width
+        y_pixel = y_norm / NORM_SIZE * image_height
+
+    from_pixel(): build from raw pixel coordinates.
+    to_pixel(): recover pixel corners for rendering.
+    area(): compute bounding box area. """
 
     tl: Point
     br: Point
@@ -85,12 +125,11 @@ class BoundingBox(BaseModel):
 
     @classmethod
     def from_pixel(cls, tl_x: int, tl_y: int, br_x: int, br_y: int, img_width: int, img_height: int) -> "BoundingBox":
-        """Normalize pixel corners to 1000×1000 square space."""
-        scale = NORM_SIZE / max(img_width, img_height)
+        """Normalize pixel corners to NORM_SIZE×NORM_SIZE square space."""
         return cls(
-            tl=Point(x=round(tl_x * scale), y=round(tl_y * scale)),
-            br=Point(x=round(br_x * scale), y=round(br_y * scale)),
-        )
+            tl=Point.from_pixel(tl_x, tl_y, img_width, img_height),
+            br=Point.from_pixel(br_x, br_y, img_width, img_height),
+        ) #may collapse if points are very closed
 
     def to_pixel(self, img_width: int, img_height: int) -> tuple[tuple[int, int], tuple[int, int]]:
         """Denormalize tl and br in pixel coordinates."""
@@ -120,7 +159,7 @@ class Message(BaseModel):
     role: Literal["system", "user", "assistant"]
     content: list[MessageContent]
 
-
+#RLEMask use the numpy/COCO convention
 class RLEMask(BaseModel):
     """Binary mask in COCO RLE format."""
 
@@ -163,12 +202,14 @@ class Annotation(BaseModel):
     source: Optional[str] = None
 
     @classmethod
-    def from_mask(cls, label: str, mask, bbox: Optional[BoundingBox] = None) -> "Annotation":
+    def from_mask(cls, label: int, mask, bbox: Optional[BoundingBox] = None) -> "Annotation":
         """Build an Annotation from a binary numpy mask."""
         rle_mask = RLEMask.from_binary_mask(mask)
         centroid = rle_mask.centroid()  # already normalized
         if bbox is None:
             ys, xs = np.nonzero(mask)
+            if len(xs) == 0:
+                raise ValueError("Cannot build Annotation bbox from an empty mask.")
             h, w = mask.shape[:2]
             bbox = BoundingBox.from_pixel(
                 int(xs.min()), int(ys.min()),
@@ -181,7 +222,6 @@ class Annotation(BaseModel):
 class Target(BaseModel):
     text: Optional[str] = None
     instances: list[Annotation] = Field(default_factory=list)
-
 
 class VLMSample(BaseModel):
     sample_id: int

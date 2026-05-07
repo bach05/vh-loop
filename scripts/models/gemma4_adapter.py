@@ -80,6 +80,3 @@ class Gemma4Adapter(VLMAdapter):
             return "all-linear"
         else:
             return cfg_lora.get("target_modules", "all-linear")
-
-    def parse_model_output(self, text):
-        return parse_out_text_json_objects_to_target(text)

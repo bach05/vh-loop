@@ -13,12 +13,16 @@ from scripts.core.constants import SUPPORTED_DATASET_SCHEMAS, SFT_CONVERTER_VERS
 import numpy as np
 
 #Convert VLMSample to a conversation
-def sample_to_messages(sample: VLMSample, dataset_schema: str = 'conversational', dataset_root: str = None) -> (int, list[dict[str, Any]]):
+def sample_to_messages(
+    sample: VLMSample,
+    dataset_schema: str = "conversational",
+    dataset_root: str | None = None,
+    include_target: bool = True,
+) -> dict[str, Any]:
 
     messages = []
     images = []
 
-    # Parse messages
     for msg in sample.messages:
         content = []
 
@@ -32,16 +36,15 @@ def sample_to_messages(sample: VLMSample, dataset_schema: str = 'conversational'
                 )
 
             elif part.type == "image":
-
                 image_id = part.image_id
-
                 img_ref = sample.images.get(image_id, None)
+
                 if img_ref is None:
                     raise ValueError(f"Image ID {image_id} not found in sample images")
-                else:
-                    img_path = img_ref.path
-                    full_image_path = Path(dataset_root) / img_path if dataset_root else Path(img_path)
-                    full_image_path = str(full_image_path)
+
+                img_path = img_ref.path
+                full_image_path = Path(dataset_root) / img_path if dataset_root else Path(img_path)
+                full_image_path = str(full_image_path)
 
                 content.append(
                     {
@@ -63,60 +66,78 @@ def sample_to_messages(sample: VLMSample, dataset_schema: str = 'conversational'
             }
         )
 
-    if dataset_schema == 'conversational':
-        #Add target
-        messages.append(
-            {
-                "role": "assistant",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": sample.target.text,
-                    }
-                ],
-            }
-        )
+    if dataset_schema == "conversational":
+        if include_target:
+            if sample.target is None or sample.target.text is None:
+                raise ValueError(
+                    f"Sample {sample.sample_id} has no target, but include_target=True"
+                )
 
-        ret_dict = \
-        {
+            messages.append(
+                {
+                    "role": "assistant",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": sample.target.text,
+                        }
+                    ],
+                }
+            )
+
+        return {
             "messages": messages,
             "images": images,
         }
-    elif dataset_schema == 'prompt-completion':
 
-        completions = [
-            {
-                "role": "assistant",
-                "content": [
+    elif dataset_schema == "prompt-completion":
+        if include_target:
+            if sample.target is None or sample.target.text is None:
+                raise ValueError(
+                    f"Sample {sample.sample_id} has no target, but include_target=True"
+                )
+
+            return {
+                "prompt": messages,
+                "completion": [
                     {
-                        "type": "text",
-                        "text": sample.target.text,
+                        "role": "assistant",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": sample.target.text,
+                            }
+                        ],
                     }
                 ],
-            }
-        ]
-
-        ret_dict = \
-            {
-                "prompt": messages,
-                "completion": completions,
                 "images": images,
             }
+
+        # For inference, return prompt-only format.
+        # Adjust this if your adapter expects another key.
+        return {
+            "messages": messages,
+            "images": images,
+        }
+
     else:
-        raise ValueError(f"Unsupported dataset schema: {dataset_schema}, supported schemas: {SUPPORTED_DATASET_SCHEMAS}")
+        raise ValueError(
+            f"Unsupported dataset schema: {dataset_schema}, "
+            f"supported schemas: {SUPPORTED_DATASET_SCHEMAS}"
+        )
 
-    return ret_dict
 
-
-def iter_sft_rows_from_manifest(manifest_path, dataset_schema='conversational', dataset_root=None):
-
+def iter_sft_rows_from_manifest(manifest_path, dataset_schema="conversational", dataset_root=None):
     for sample in iter_vlm_samples_from_manifest(
         manifest_path,
         attach_dataset_info=False,
     ):
-        yield sample_to_messages(sample, dataset_schema=dataset_schema, dataset_root=dataset_root)
-
-
+        yield sample_to_messages(
+            sample,
+            dataset_schema=dataset_schema,
+            dataset_root=dataset_root,
+            include_target=True,
+        )
 
 def manifest_fingerprint(
     manifest_path: str | Path,

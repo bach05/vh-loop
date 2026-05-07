@@ -42,7 +42,7 @@ from collections import defaultdict
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Iterable, List
 
 import yaml
 from tqdm import tqdm
@@ -87,19 +87,22 @@ class CocoToCanonicalConfig:
     include_instance_metadata: bool = True
 
 
-def load_yaml_config(path: str | Path) -> dict[str, Any]:
+def load_yaml_config(path: str | Path) -> Any:
     path = Path(path)
 
     with path.open("r", encoding="utf-8") as f:
         data = yaml.safe_load(f)
 
+    # If the file is empty return an empty structure
     if data is None:
         return {}
 
-    if not isinstance(data, dict):
-        raise TypeError(f"YAML config root must be a mapping, got {type(data)}")
+    # Accept either a mapping (single config) or a sequence (list of configs)
+    if isinstance(data, dict) or isinstance(data, list):
+        return data
 
-    return data
+    raise TypeError(f"YAML config root must be a mapping or a list of mappings, got {type(data)}")
+
 
 
 def normalize_include_categories(value: Any) -> set[int] | None:
@@ -123,22 +126,28 @@ def normalize_include_categories(value: Any) -> set[int] | None:
     )
 
 
-def build_config_from_yaml_and_cli(args: argparse.Namespace) -> CocoToCanonicalConfig:
+def build_config_from_yaml_and_cli(args: argparse.Namespace, yaml_item: dict[str, Any] | None = None) -> CocoToCanonicalConfig:
+    """
+    Build a CocoToCanonicalConfig by merging:
+      - dataclass defaults
+      - optional per-item YAML mapping (yaml_item)
+      - explicit CLI overrides (args)
+    If yaml_item is None we still honor CLI overrides and dataclass defaults.
+    """
     cfg = CocoToCanonicalConfig()
 
-    # 1. YAML overrides dataclass defaults
-    if args.config is not None:
-        yaml_data = load_yaml_config(args.config)
+    # 1. YAML overrides dataclass defaults (yaml_item may be None)
+    if yaml_item is not None:
+        if not isinstance(yaml_item, dict):
+            raise TypeError("Each YAML entry must be a mapping/dict")
 
         valid_keys = set(asdict(cfg).keys())
-        unknown_keys = set(yaml_data.keys()) - valid_keys
+        unknown_keys = set(yaml_item.keys()) - valid_keys
 
         if unknown_keys:
-            raise ValueError(
-                f"Unknown keys in YAML config {args.config}: {sorted(unknown_keys)}"
-            )
+            raise ValueError(f"Unknown keys in YAML config entry: {sorted(unknown_keys)}")
 
-        for key, value in yaml_data.items():
+        for key, value in yaml_item.items():
             if key in {"coco_json", "output_jsonl"} and value is not None:
                 value = Path(value)
 
@@ -197,6 +206,32 @@ def build_config_from_yaml_and_cli(args: argparse.Namespace) -> CocoToCanonicalC
 
     return cfg
 
+def build_configs_from_yaml_and_cli(args: argparse.Namespace) -> list[CocoToCanonicalConfig]:
+    """
+    Load the YAML (if provided) and return a list of CocoToCanonicalConfig objects.
+    If the YAML root is a list, create one config per entry. If YAML root is a mapping,
+    create a single config from it. If no YAML provided, create a single config using CLI only.
+    """
+    yaml_root = None
+    if args.config is not None:
+        yaml_root = load_yaml_config(args.config)
+
+    configs: list[CocoToCanonicalConfig] = []
+
+    if isinstance(yaml_root, list):
+        # Each item in list should be a mapping
+        for idx, item in enumerate(yaml_root):
+            if item is None:
+                item = {}
+            cfg = build_config_from_yaml_and_cli(args, yaml_item=item)
+            configs.append(cfg)
+    else:
+        # yaml_root may be dict or None
+        cfg = build_config_from_yaml_and_cli(args, yaml_item=(yaml_root if isinstance(yaml_root, dict) else None))
+        configs.append(cfg)
+
+    return configs
+
 
 # =============================================================================
 # Geometry utilities
@@ -244,18 +279,20 @@ def normalize_xyxy(
     img_height: int,
 ) -> list[int]:
     """
-    Normalize pixel xyxy box into canonical 1000x1000 coordinate space.
+    Normalize pixel xyxy box into canonical NORM_SIZExNORM_SIZE coordinate space.
 
     Convention:
-        scale = NORM_SIZE / max(img_width, img_height)
+        scale_x = img_width / NORM_SIZE
+        scale_y = img_height / NORM_SIZE
     """
-    scale = NORM_SIZE / max(img_width, img_height)
+    scale_x = img_width / NORM_SIZE
+    scale_y = img_height / NORM_SIZE
 
     norm = [
-        round(x1 * scale),
-        round(y1 * scale),
-        round(x2 * scale),
-        round(y2 * scale),
+        round(x1 * scale_x),
+        round(y1 * scale_y),
+        round(x2 * scale_x),
+        round(y2 * scale_y),
     ]
 
     return [
@@ -950,10 +987,16 @@ def main() -> None:
     parser = build_argparser()
     args = parser.parse_args()
 
-    cfg = build_config_from_yaml_and_cli(args)
-    summary = convert_coco_to_canonical_jsonl(cfg)
+    configs = build_configs_from_yaml_and_cli(args)
 
-    print(json.dumps(summary, indent=2, ensure_ascii=False))
+    all_summaries = []
+    for cfg in configs:
+        summary = convert_coco_to_canonical_jsonl(cfg)
+        all_summaries.append(summary)
+
+    # Print a combined summary (list of per-config summaries)
+    print(json.dumps(all_summaries, indent=2, ensure_ascii=False))
+
 
 
 if __name__ == "__main__":

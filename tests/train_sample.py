@@ -6,6 +6,7 @@ from scripts.core.factories import build_peft_config, build_hf_datasets
 from scripts.core.factories import DatasetBuildError
 from scripts.data.utils import train_val_split
 
+import scripts.models  # Ensure model adapters are registered
 from scripts.core.registry import get_model_adapter
 from scripts.training.backends.hf_trl import HFSFTBackend
 

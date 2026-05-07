@@ -1,0 +1,45 @@
+gt_jsonl: ${oc.env:DATA_PATH, /data}/panizzolo/paniz_test_03_30_SINGLE.vh_loop.jsonl
+
+# Option A: explicit list
+predictions:
+  - name: gemma_lora
+    path: ${oc.env:MODEL_PATH, /models}/vhloop/testing/gemma4_panizzolo_lora/predictions.jsonl
+  - name: gemma
+    path: ${oc.env:MODEL_PATH, /models}/vhloop/testing/gemma4_panizzolo_lora_ORI_MODEL/predictions.jsonl
+
+
+# Option B: folder search
+#predictions_dir: null
+#patterns:
+#  - "*.jsonl"
+
+thresholds: [0.1, 0.25, 0.5, 0.75, 0.9]
+
+class_aware: true
+
+hydra:
+  run:
+    dir: ${oc.env:MODEL_PATH, /models}/vhloop/comparing
+
+output_dir: ${hydra:run.dir}
+
+plots:
+  enabled: true
+
+visualization:
+  enabled: true
+
+  # If null, paths are resolved relative to current working directory.
+  # Use this if ImageAsset.path inside the JSONL is relative.
+  image_root: ${oc.env:DATA_PATH, /data}/panizzolo
+
+  # If empty, the script will visualize the first N samples.
+  sample_ids: []
+
+  max_samples: 500
+
+  # Options:
+  #   best_f1 -> each model uses the threshold that maximizes its F1
+  #   fixed   -> all models use fixed_threshold
+  threshold_mode: best_f1
+  fixed_threshold: 0.5
