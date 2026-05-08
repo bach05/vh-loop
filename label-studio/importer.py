@@ -43,6 +43,55 @@ def read_samples(jsonl_path: Path) -> Tuple[List[Dict[str, Any]], str]:
     return samples, dataset_id
 
 
+LABEL_MAP: Dict[int, str] = {
+    1: "rotor",
+    2: "stator",
+    3: "shaft",
+}
+
+
+def build_predictions(instances: List[Dict[str, Any]], img_w: int, img_h: int) -> List[Dict]:
+    """
+    Converts JSONL target instances into Label Studio prediction results.
+    JSONL bbox format: tl/br coordinates normalized to 1000x1000.
+    Label Studio expects x, y, width, height as percentages (0-100).
+    """
+    results = []
+    for inst in instances:
+        label_id = inst.get("label")
+        label_name = LABEL_MAP.get(label_id)
+        if not label_name:
+            print(f"WARNING: label ID {label_id} not found within LABEL_MAP, skip.")
+            continue
+
+        bbox = inst.get("bbox", {})
+        tl = bbox.get("tl", {})
+        br = bbox.get("br", {})
+
+        # Convert from 1000x1000 normalized space to percentage (divide by 10)
+        x = tl.get("x", 0) / 10
+        y = tl.get("y", 0) / 10
+        width = (br.get("x", 0) - tl.get("x", 0)) / 10
+        height = (br.get("y", 0) - tl.get("y", 0)) / 10
+
+        results.append({
+            "type": "rectanglelabels",
+            "from_name": "label",
+            "to_name": "image",
+            "original_width": img_w,
+            "original_height": img_h,
+            "value": {
+                "x": x,
+                "y": y,
+                "width": width,
+                "height": height,
+                "rotation": 0,
+                "rectanglelabels": [label_name],
+            },
+        })
+    return results
+
+
 def build_tasks(samples: List[Dict[str, Any]], storage_path: Path) -> List[Dict]:
     """
     Converts raw JSONL samples into Label Studio task dicts.
@@ -74,15 +123,29 @@ def build_tasks(samples: List[Dict[str, Any]], storage_path: Path) -> List[Dict]
             rel_path = img_path.as_posix()
 
         image_url = f"/data/local-files/?d={quote(rel_path)}"
-        tasks.append(
-            {
-                "data": {
-                    "image": image_url,
-                    "sample_id": s.get("sample_id", f"idx_{i}"),
-                    "storage_path": str(img_path),
-                }
+        # Image dimensions for LS coordinate context
+        img_size = s.get("images", {}).get("query", {}).get("size", [0, 0])
+        img_w, img_h = img_size[0], img_size[1]
+
+        # Build pre-annotations from target instances
+        instances = s.get("target", {}).get("instances", [])
+        prediction_results = build_predictions(instances, img_w, img_h)
+
+        task: Dict[str, Any] = {
+            "data": {
+                "image": image_url,
+                "sample_id": s.get("sample_id", f"idx_{i}"),
+                "storage_path": str(img_path),
             }
-        )
+        }
+
+        if prediction_results:
+            task["predictions"] = [{
+                "model_version": "pre-annotation",
+                "result": prediction_results,
+            }]
+
+        tasks.append(task)
     return tasks
 
 
@@ -112,7 +175,7 @@ if __name__ == "__main__":
     client = make_client(args.api_key, args.ls_url)
 
     samples, dataset_id = read_samples(args.jsonl)
-    print(f"Campioni letti: {len(samples)}  |  dataset_id: {dataset_id}")
+    print(f"Read {len(samples)} samples  |  dataset_id: {dataset_id}")
 
     if not samples:
         print("Critical error: no samples extracted from JSONL file.")
