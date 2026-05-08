@@ -32,7 +32,7 @@ def start_label_studio(
 
     os.environ["LABEL_STUDIO_LOCAL_FILES_SERVING_ENABLED"] = "true"
     os.environ["LABEL_STUDIO_LOCAL_FILES_DOCUMENT_ROOT"] = (
-        str(images_root.absolute()).replace("\\", "/")
+        str(images_root.absolute()).replace("/", "\\").replace("\\", "\\\\")
     )
     os.environ["LABEL_STUDIO_CORS_ALLOWED_ORIGINS"] = "*"
 

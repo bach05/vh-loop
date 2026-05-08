@@ -43,7 +43,7 @@ def read_samples(jsonl_path: Path) -> Tuple[List[Dict[str, Any]], str]:
     return samples, dataset_id
 
 
-def build_tasks(samples: List[Dict[str, Any]], images_root: Path) -> List[Dict]:
+def build_tasks(samples: List[Dict[str, Any]], storage_path: Path) -> List[Dict]:
     """
     Converts raw JSONL samples into Label Studio task dicts.
     Maps to the $image and $sample_id variables in XML config.
@@ -66,10 +66,10 @@ def build_tasks(samples: List[Dict[str, Any]], images_root: Path) -> List[Dict]:
 
         img_path = Path(raw_path)
         if not img_path.is_absolute():
-            img_path = (images_root / raw_path).resolve()
+            img_path = (storage_path / raw_path).resolve()
 
         try:
-            rel_path = img_path.relative_to(images_root).as_posix()
+            rel_path = img_path.relative_to(storage_path).as_posix()
         except ValueError:
             rel_path = img_path.as_posix()
 
@@ -105,7 +105,7 @@ if __name__ == "__main__":
     parser.add_argument("--api-key", required=True)
     parser.add_argument("--project-id", type=int, required=True)
     parser.add_argument("--jsonl", type=Path, required=True)
-    parser.add_argument("--images-root", type=Path, required=True)
+    parser.add_argument("--storage-path", type=Path, required=True)
     parser.add_argument("--ls-url", default="http://localhost:8080")
     args = parser.parse_args()
 
@@ -118,7 +118,7 @@ if __name__ == "__main__":
         print("Critical error: no samples extracted from JSONL file.")
         raise SystemExit(1)
 
-    tasks = build_tasks(samples, args.images_root)
+    tasks = build_tasks(samples, args.storage_path)
     print(f"Valid tasks generated: {len(tasks)}")
 
     if not tasks:
