@@ -1,0 +1,26 @@
+<View>
+  <Header value="Sample ID: $sample_id"/>
+
+  <Image
+    name="image"
+    value="$image"
+    zoom="true"
+    zoomControl="true"
+    brightnessControl="true"
+  />
+
+  <!-- Prompt points: foreground (green) e background (red) -->
+  <KeyPointLabels name="sam_points" toName="image" smart="true">
+    <Label value="foreground" background="#00CC44" hotkey="f"/>
+    <Label value="background" background="#CC2200" hotkey="b"/>
+  </KeyPointLabels>
+
+  <!-- smartOnly="true": only keypoints are enabled -->
+  <BrushLabels name="mask" toName="image" smart="true" smartOnly="true">
+    <Label value="stator"      background="#E8596A" hotkey="1"/>
+    <Label value="rotor"       background="#5B9BFF" hotkey="2"/>
+    <Label value="armature"    background="#F5A623" hotkey="3"/>
+    <Label value="drive_shaft" background="#7ED321" hotkey="4"/>
+  </BrushLabels>
+
+</View>
