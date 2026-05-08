@@ -9,18 +9,24 @@
     brightnessControl="true"
   />
 
-  <!-- Prompt points: foreground (green) e background (red) -->
+  <!-- JSONL bbox pre-annotations -->
+  <RectangleLabels name="label" toName="image" showInline="true">
+    <Label value="rotor" background="#5B9BFF"/>
+    <Label value="stator" background="#E8596A"/>
+    <Label value="shaft" background="#7ED321"/>
+  </RectangleLabels>
+
+  <!-- Prompt points SAM2-->
   <KeyPointLabels name="sam_points" toName="image" smart="true">
     <Label value="foreground" background="#00CC44" hotkey="f"/>
     <Label value="background" background="#CC2200" hotkey="b"/>
   </KeyPointLabels>
 
-  <!-- smartOnly="true": only keypoints are enabled -->
+  <!-- Masks SAM2 -->
   <BrushLabels name="mask" toName="image" smart="true" smartOnly="true">
-    <Label value="stator"      background="#E8596A" hotkey="1"/>
-    <Label value="rotor"       background="#5B9BFF" hotkey="2"/>
-    <Label value="armature"    background="#F5A623" hotkey="3"/>
-    <Label value="drive_shaft" background="#7ED321" hotkey="4"/>
+    <Label value="rotor" background="#5B9BFF" hotkey="1"/>
+    <Label value="stator" background="#E8596A" hotkey="2"/>
+    <Label value="shaft" background="#7ED321" hotkey="3"/>
   </BrushLabels>
 
 </View>
