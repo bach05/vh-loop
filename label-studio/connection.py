@@ -59,6 +59,31 @@ def get_or_create_project(
     )
 
 
+def setup_local_storage(
+        client: LabelStudio,
+        project_id: int,
+        storage_path: Path,
+        title: str = "Local Images",
+) -> None:
+    """
+    Creates a local file source storage connection for the project.
+    storage_path must be a subfolder of LABEL_STUDIO_LOCAL_FILES_DOCUMENT_ROOT.
+    """
+    # LS on Windows needs single backslashes in the API path field
+    path_str = str(storage_path.absolute())
+
+    try:
+        client.import_storage.local.create(
+            project=project_id,
+            path=path_str,
+            use_blob_urls=True,
+            title=title,
+        )
+        print(f"Local storage connected: '{path_str}' → project {project_id}.")
+    except Exception as e:
+        print(f"Could not create local storage (already exists?): {e}")
+
+
 def connect_ml_backend(
     client: LabelStudio,
     project_id: int,
@@ -93,6 +118,12 @@ if __name__ == "__main__":
         help="Connect SAM2 backend to the project (must already be running)",
     )
     parser.add_argument("--sam-url", default="http://localhost:9090")
+    parser.add_argument(
+        "--storage-path",
+        type=Path,
+        default=None,
+        help="Absolute path to the images folder for local storage (must be under DOCUMENT_ROOT)",
+    )
     args = parser.parse_args()
 
     print("Checking Label Studio is reachable...")
@@ -105,3 +136,6 @@ if __name__ == "__main__":
 
     if args.connect_sam:
         connect_ml_backend(client, project.id, args.sam_url)
+
+    if args.storage_path:
+        setup_local_storage(client, project.id, args.storage_path)
