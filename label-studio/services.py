@@ -17,7 +17,7 @@ def wait_for_port(host: str, port: int, timeout_s: int = 180) -> None:
                 return
         except OSError:
             time.sleep(1)
-    raise TimeoutError(f"{host}:{port} non raggiungibile dopo {timeout_s}s")
+    raise TimeoutError(f"{host}:{port} not reachable after {timeout_s}s")
 
 
 def start_label_studio(
