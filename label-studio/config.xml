@@ -9,24 +9,28 @@
     brightnessControl="true"
   />
 
-  <!-- JSONL bbox pre-annotations -->
-  <RectangleLabels name="label" toName="image" showInline="true">
+  <!-- OUTPUT: Masks SAM2 -->
+  <Header value="Brush Labels"/>
+  <BrushLabels name="mask" toName="image" smart="true" smartOnly="true">
     <Label value="rotor" background="#5B9BFF"/>
     <Label value="stator" background="#E8596A"/>
     <Label value="shaft" background="#7ED321"/>
-  </RectangleLabels>
+  </BrushLabels>
 
-  <!-- Prompt points SAM2-->
+  <!-- INPUT: Prompt points SAM2-->
+  <Header value="KeyPoint Labels"/>
   <KeyPointLabels name="sam_points" toName="image" smart="true">
-    <Label value="foreground" background="#00CC44" hotkey="f"/>
-    <Label value="background" background="#CC2200" hotkey="b"/>
+    <Label value="rotor" background="#5B9BFF" showInline="true" hotkey="1"/>
+    <Label value="stator" background="#E8596A" showInline="true" hotkey="2"/>
+    <Label value="shaft" background="#7ED321" showInline="true" hotkey="3"/>
   </KeyPointLabels>
 
-  <!-- Masks SAM2 -->
-  <BrushLabels name="mask" toName="image" smart="true" smartOnly="true">
-    <Label value="rotor" background="#5B9BFF" hotkey="1"/>
-    <Label value="stator" background="#E8596A" hotkey="2"/>
-    <Label value="shaft" background="#7ED321" hotkey="3"/>
-  </BrushLabels>
+  <!-- INPUT: JSONL bbox pre-annotations -->
+  <Header value="Rectangle Labels"/>
+  <RectangleLabels name="label" toName="image" smart="true" showInline="true">
+    <Label value="rotor" background="#5B9BFF" showInline="true"/>
+    <Label value="stator" background="#E8596A" showInline="true"/>
+    <Label value="shaft" background="#7ED321" showInline="true"/>
+  </RectangleLabels>
 
 </View>
