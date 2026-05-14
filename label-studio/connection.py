@@ -79,7 +79,7 @@ def setup_local_storage(
             use_blob_urls=True,
             title=title,
         )
-        print(f"Local storage connected: '{path_str}' → project {project_id}.")
+        print(f"Local storage connected: '{path_str}' -> project {project_id}.")
     except Exception as e:
         print(f"Could not create local storage (already exists?): {e}")
 
@@ -92,7 +92,7 @@ def connect_ml_backend(
 ) -> None:
     """Registers an ML backend with the given project."""
     try:
-        client.ml.create(title=title, url=backend_url, project=project_id)
+        client.ml.create(title=title, url=backend_url, project=project_id, is_interactive=True)
         print(f"ML backend '{title}' connected to project {project_id}.")
     except Exception as e:
         print(f"Could not connect ML backend (already registered?): {e}")
