@@ -53,7 +53,7 @@ def main() -> None:
     args = parser.parse_args()
 
     # ------------------------------------------------------------------ #
-    # STEP 1 – Services                                                    #
+    # STEP 1 – Services
     # ------------------------------------------------------------------ #
     if args.start_services:
         print("STEP 1/5: starting Label Studio...")
@@ -64,7 +64,7 @@ def main() -> None:
     print("STEP 1/5 completed.\n")
 
     # ------------------------------------------------------------------ #
-    # STEP 2 – Project setup                                               #
+    # STEP 2 – Project setup
     # ------------------------------------------------------------------ #
     print("STEP 2/5: creating the client and configuring the project...")
     client = make_client(args.api_key, args.ls_url)
@@ -78,14 +78,14 @@ def main() -> None:
     print(f"STEP 2/5 completed: project_id={project.id}\n")
 
     # ------------------------------------------------------------------ #
-    # STEP 3 – Local storage                                               #
+    # STEP 3 – Local storage
     # ------------------------------------------------------------------ #
     print(f"STEP 3/5: configure local storage → {args.storage_path}...")
     setup_local_storage(client, project.id, args.storage_path)
     print("STEP 3/5 completed.\n")
     
     # ------------------------------------------------------------------ #
-    # STEP 4 – Parse JSONL and import tasks                                #
+    # STEP 4 – Parse JSONL and import tasks #
     # ------------------------------------------------------------------ #
     print(f"STEP 4/5: reading JSONL from {args.jsonl}...")
     samples, dataset_id = read_samples(args.jsonl)
@@ -106,7 +106,7 @@ def main() -> None:
     print("STEP 4/5 completed.\n")
 
     # ------------------------------------------------------------------ #
-    # STEP 5 – SAM2 backend (optional)                                     #
+    # STEP 5 – SAM2 backend (optional)
     # ------------------------------------------------------------------ #
     if args.connect_sam_backend:
         print("STEP 5/5: starting and connecting SAM2 backend...")

@@ -6,8 +6,25 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 from urllib.parse import quote
+from pycocotools import mask as coco_mask
+import numpy as np
 
 from label_studio_sdk import LabelStudio
+from label_studio_sdk.converter import brush
+
+
+LABEL_MAP: Dict[int, str] = {
+    1: "rotor",
+    2: "stator",
+    3: "shaft",
+}
+
+
+def coco_rle_to_ls_rle(counts: str, size: list) -> list:
+    """ Convert COCO RLE string [H, W] to LS brush RLE via label_studio_sdk. """
+    binary_mask = coco_mask.decode({"counts": counts, "size": size})
+    ls_mask = (binary_mask * 255).astype(np.uint8)
+    return brush.mask2rle(ls_mask)
 
 
 def read_samples(jsonl_path: Path) -> Tuple[List[Dict[str, Any]], str]:
@@ -33,29 +50,27 @@ def read_samples(jsonl_path: Path) -> Tuple[List[Dict[str, Any]], str]:
             continue
         try:
             data = json.loads(line)
+
+            # skip dataset_info row
+            if data.get("record_type") == "dataset_info":
+                info = data.get("info", {})
+                dataset_id = info.get("dataset_id", dataset_id)
+                continue
+
             samples.append(data)
+
             if "dataset_id" in data:
                 dataset_id = data["dataset_id"]
+
         except json.JSONDecodeError as e:
-            print(f"JSON error at line {i+1}: {e}")
+            print(f"JSON decode error line {i + 1}: {e}")
             print(f"Problematic line content: {line[:100]}...")
 
     return samples, dataset_id
 
 
-LABEL_MAP: Dict[int, str] = {
-    1: "rotor",
-    2: "stator",
-    3: "shaft",
-}
-
-
 def build_predictions(instances: List[Dict[str, Any]], img_w: int, img_h: int) -> List[Dict]:
-    """
-    Converts JSONL target instances into Label Studio prediction results.
-    JSONL bbox format: tl/br coordinates normalized to 1000x1000.
-    Label Studio expects x, y, width, height as percentages (0-100).
-    """
+    """ Converts JSONL target instances into Label Studio prediction results. """
     results = []
     for inst in instances:
         label_id = inst.get("label")
@@ -64,29 +79,35 @@ def build_predictions(instances: List[Dict[str, Any]], img_w: int, img_h: int) -
             print(f"WARNING: label ID {label_id} not found within LABEL_MAP, skip.")
             continue
 
-        bbox = inst.get("bbox", {})
-        tl = bbox.get("tl", {})
-        br = bbox.get("br", {})
+        mask = inst.get("mask")
+        if not mask:
+            continue
 
-        # Convert from 1000x1000 normalized space to percentage (divide by 10)
-        x = tl.get("x", 0) / 10
-        y = tl.get("y", 0) / 10
-        width = (br.get("x", 0) - tl.get("x", 0)) / 10
-        height = (br.get("y", 0) - tl.get("y", 0)) / 10
+        rle_counts = mask.get("counts")
+        rle_size = mask.get("size") # [H, W]
+
+        if not rle_counts or not rle_size:
+            print("WARNING: invalid RLE mask")
+            continue
+
+        ls_rle = coco_rle_to_ls_rle(rle_counts, rle_size)
+        if not ls_rle:
+            print("WARNING: empty RLE after conversion")
+            continue
 
         results.append({
-            "type": "rectanglelabels",
-            "from_name": "label",
+            "id": f"mask_{len(results)}",
+            "type": "brushlabels",
+            "from_name": "mask",
             "to_name": "image",
             "original_width": img_w,
             "original_height": img_h,
+            "image_rotation": 0,
+            "origin": "prediction",
             "value": {
-                "x": x,
-                "y": y,
-                "width": width,
-                "height": height,
-                "rotation": 0,
-                "rectanglelabels": [label_name],
+                "format": "rle",
+                "rle": ls_rle,
+                "brushlabels": [label_name],
             },
         })
     return results
@@ -141,7 +162,7 @@ def build_tasks(samples: List[Dict[str, Any]], storage_path: Path) -> List[Dict]
 
         if prediction_results:
             task["predictions"] = [{
-                "model_version": "pre-annotation",
+                "model_version": "sam2_rle_masks",
                 "result": prediction_results,
             }]
 
@@ -150,7 +171,7 @@ def build_tasks(samples: List[Dict[str, Any]], storage_path: Path) -> List[Dict]
 
 
 def import_tasks(client: LabelStudio, project_id: int, tasks: List[Dict]) -> None:
-    """Sends the task list to the Label Studio project."""
+    """ Sends the task list to the Label Studio project. """
     print(f"Importing {len(tasks)} tasks into project {project_id}...")
     client.projects.import_tasks(id=project_id, request=tasks)
     print("Import completed.")
