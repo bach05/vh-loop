@@ -97,12 +97,13 @@ class DatasetPromptDet(DataSample):
         images = []
 
 
-
+        #append prompt
         messages.append(
             {
                 "role": "user",
                 "content": [
                     {"type":'image', "path": image_path},
+                    {"type":'text', "text": prompt},
 
                 ]
             }
