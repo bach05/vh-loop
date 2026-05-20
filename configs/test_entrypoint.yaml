@@ -1,10 +1,10 @@
 defaults:
-  - /model: gemma4 # qwen3_5, gemma4
+  - /model: qwen3_5 # qwen3_5, gemma4
   - /experiment: test_exp
-  - /dataset: panizzolo
+  - /dataset: panizzolo2
   - /transform: paniz_s1000
   - /peft: lora
-  - /trainer: gemma4_sft_trainer # gemma4_sft_trainer, qwen_sft_trainer
+  - /trainer: qwen_sft_trainer # gemma4_sft_trainer, qwen_sft_trainer
   - /quantization: null # 4bit, 8bit, null
   - _self_
 

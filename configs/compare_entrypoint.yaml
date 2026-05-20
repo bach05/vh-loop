@@ -2,10 +2,16 @@ gt_jsonl: ${oc.env:DATA_PATH, /data}/panizzolo/paniz_test_03_30_SINGLE.vh_loop.j
 
 # Option A: explicit list
 predictions:
-  - name: gemma_lora
-    path: ${oc.env:MODEL_PATH, /models}/vhloop/testing/gemma4_panizzolo_lora/predictions.jsonl
-  - name: gemma
-    path: ${oc.env:MODEL_PATH, /models}/vhloop/testing/gemma4_panizzolo_lora_ORI_MODEL/predictions.jsonl
+  # - name: gemma_lora
+  #   path: ${oc.env:MODEL_PATH, /models}/vhloop/testing/gemma4_panizzolo_lora/predictions.jsonl
+  # - name: gemma_lora_2
+  #   path: ${oc.env:MODEL_PATH, /models}/vhloop/testing/gemma4_panizzolo2_lora/predictions.jsonl
+  # - name: gemma
+  #   path: ${oc.env:MODEL_PATH, /models}/vhloop/testing/gemma4_panizzolo_lora_ORI_MODEL/predictions.jsonl
+  - name: qwen_lora
+    path: ${oc.env:MODEL_PATH, /models}/vhloop/testing/qwen3_5_panizzolo_lora/predictions.jsonl
+  # - name: qwen
+  #   path: ${oc.env:MODEL_PATH, /models}/vhloop/testing/qwen3_5_panizzolo_lora_ORI_MODEL/predictions.jsonl
 
 
 # Option B: folder search

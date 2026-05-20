@@ -1,0 +1,11 @@
+training:
+    -   id: paniz_04-02_SINGLE
+        dataset_schema: conversational # conversational, prompt-completion
+        jsonl_path: ${oc.env:DATA_PATH, /data}/panizzolo/paniz_train_04_02_SINGLE.vh_loop.jsonl
+        root_override: ${oc.env:DATA_PATH, /data}/panizzolo/
+
+testing:
+    -   id: paniz_04_16_SINGLE
+        dataset_schema: conversational # conversational, prompt-completion
+        jsonl_path: ${oc.env:DATA_PATH, /data}/panizzolo/paniz_04_16_SINGLE.vh_loop.jsonl
+        root_override: ${oc.env:DATA_PATH, /data}/panizzolo
