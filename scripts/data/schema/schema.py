@@ -5,7 +5,7 @@ from typing import Literal, Optional, Any, cast
 from pydantic import BaseModel, Field, model_validator
 import numpy as np
 
-from scripts.core.constants import NORM_SIZE
+from scripts.core.constants import NORM_SIZE, SCHEMA_VERSION
 
 """
 Image reference frame convention.

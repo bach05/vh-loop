@@ -3,7 +3,7 @@ from typing import Any, Optional, Callable
 from datasets import Dataset as HFDataset
 import hashlib
 
-from scripts.data.schema import VLMSample
+from data.schema.schema import VLMSample
 from scripts.data.manifest_utils import iter_vlm_samples_from_manifest
 from pathlib import Path
 from PIL import Image

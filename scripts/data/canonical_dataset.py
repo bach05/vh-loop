@@ -9,7 +9,7 @@ from PIL import Image
 from torch.utils.data import Dataset
 
 from scripts.data.hf_dataset import sample_to_messages, _apply_transform
-from scripts.data.schema import VLMSample, SampleRecord, DatasetInfo
+from data.schema.schema import VLMSample, SampleRecord, DatasetInfo
 
 
 class CanonicalVLMDataset(Dataset):

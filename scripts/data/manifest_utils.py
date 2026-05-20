@@ -1,12 +1,8 @@
 import json
 from pathlib import Path
 from collections.abc import Iterator
-from typing import Any
 
-from pydantic import BaseModel, Field
-from typing import Literal, Optional
-
-from scripts.data.schema import VLMSample, DatasetInfo, DatasetInfoRecord
+from data.schema.schema import VLMSample, DatasetInfo, DatasetInfoRecord
 
 def read_manifest_info(path: str | Path) -> DatasetInfo:
     path = Path(path)

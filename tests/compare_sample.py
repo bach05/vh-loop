@@ -17,7 +17,7 @@ from hydra.utils import to_absolute_path
 from omegaconf import DictConfig
 from PIL import Image
 
-from scripts.data.schema import SampleRecord, VLMSample
+from data.schema.schema import SampleRecord, VLMSample
 from scripts.core.constants import NORM_SIZE
 
 

@@ -5,7 +5,7 @@ import logging
 
 from typing import List, Any, Dict, Tuple, Optional
 
-from scripts.data.schema import Target, Annotation, BoundingBox, Point
+from data.schema.schema import Target, Annotation, BoundingBox, Point
 from scripts.core.constants import NORM_SIZE
 
 

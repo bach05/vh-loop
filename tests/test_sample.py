@@ -16,20 +16,16 @@ import torch
 import logging
 from pathlib import Path
 
-from torch.utils.data import dataloader
 from tqdm import tqdm
 import json
-
-from trl.trainer.utils import use_adapter
 
 from scripts.core.factories import build_transform
 from scripts.core.factories import DatasetBuildError
 from scripts.data.canonical_dataset import CanonicalVLMDataset, InferenceVLMDataset
 from scripts.core.registry import get_model_adapter
-from scripts.data.schema import DatasetInfo, DatasetInfoRecord, SampleRecord
+from data.schema.schema import DatasetInfo, DatasetInfoRecord, SampleRecord
 from scripts.data.manifest_utils import read_manifest_info
 
-import scripts.models
 from scripts.core import registry
 print("registered adapters:", list(registry._MODEL_ADAPTERS.keys()))
 
