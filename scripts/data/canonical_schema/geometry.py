@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""Geometry primitives used by the data schema.
+"""Geometry primitives used by the data canonical_schema.
 
 This module defines small Pydantic models for common geometric
 primitives: 2-D points, axis-aligned bounding boxes and RLE masks. The

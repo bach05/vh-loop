@@ -5,7 +5,7 @@ import logging
 
 from typing import List, Any, Dict, Tuple, Optional
 
-from data.schema.schema import Target, Annotation, BoundingBox, Point
+from data.canonical_schema.schema import Target, Annotation, BoundingBox, Point
 from scripts.core.constants import NORM_SIZE
 
 
@@ -265,7 +265,7 @@ def _annotation_to_text_item(
     """
     Serialize the annotation back to a canonical text target.
 
-    Here the bbox is represented in the schema coordinate space:
+    Here the bbox is represented in the canonical_schema coordinate space:
     normalized 1000x1000 square space.
     """
     return {
@@ -291,7 +291,7 @@ def parse_out_text_json_objects_to_target(
 ) -> tuple[Target, Dict[str, Any]]:
     """
     Parse VLM text output containing JSON detections and convert it to the
-    canonical VLM dataset schema.
+    canonical VLM dataset canonical_schema.
 
     Expected examples:
 

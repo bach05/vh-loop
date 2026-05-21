@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""Base sample abstractions for the schema package.
+"""Base sample abstractions for the canonical_schema package.
 
 This module defines :class:`DataSample`, the abstract contract that
 concrete sample types must implement (notably :meth:`sample_to_message`).
@@ -13,7 +13,7 @@ from pydantic import BaseModel
 
 from scripts.core.constants import SUPPORTED_PROMPTING_SCHEMAS
 
-# Import schema types from the package root (relative import).
+# Import canonical_schema types from the package root (relative import).
 if TYPE_CHECKING:
     from ..dataset_header import DatasetInfo, MessageBuildInfo
 

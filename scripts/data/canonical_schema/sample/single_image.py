@@ -10,7 +10,7 @@ from typing import Any, Literal
 from pydantic import Field, model_validator
 
 from scripts.core.constants import SUPPORTED_PROMPTING_SCHEMAS
-# relative import to project constants and local schema modules
+# relative import to project constants and local canonical_schema modules
 from ..assets import ImageAsset
 from ..annotations import InstanceAnnotation
 from ..dataset_header import DatasetInfo, MessageBuildInfo

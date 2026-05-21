@@ -2,7 +2,7 @@
 
 from abc import ABC, abstractmethod
 from typing import Any
-from data.schema.schema import Target
+from data.canonical_schema.schema import Target
 from transformers import PreTrainedModel, ProcessorMixin
 from scripts.core.output_parsers import parse_out_text_json_objects_to_target
 

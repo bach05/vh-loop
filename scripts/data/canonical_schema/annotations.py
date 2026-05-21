@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""Annotation models used by the data schema package.
+"""Annotation models used by the data canonical_schema package.
 
 This module defines instance-level annotations that describe labeled
 objects inside an image sample (bounding boxes, keypoints, masks,

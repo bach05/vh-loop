@@ -1,8 +1,8 @@
-"""Public exports for the data schema package.
+"""Public exports for the data canonical_schema package.
 
 This module re-exports commonly used models from the
-`scripts.data.schema` submodules so callers can import them from
-``scripts.data.schema``. Use relative imports to avoid import-time
+`scripts.data.canonical_schema` submodules so callers can import them from
+``scripts.data.canonical_schema``. Use relative imports to avoid import-time
 cycles when modules are imported from inside the package.
 """
 

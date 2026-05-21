@@ -489,13 +489,13 @@ def convert_coco_annotation_to_canonical_instance(
         )
 
     canonical_instance: dict[str, Any] = {
-        # New schema: label must always be int.
+        # New canonical_schema: label must always be int.
         "label": category_id,
 
         # Bounding box in canonical normalized 1000x1000 coordinates.
         "bbox": norm_xyxy_to_canonical_bbox(norm_box),
 
-        # New schema: one positive point generated as bbox center.
+        # New canonical_schema: one positive point generated as bbox center.
         "pos_points": [
             bbox_center_point_from_norm_xyxy(norm_box)
         ],
@@ -579,7 +579,7 @@ def convert_coco_image_to_sample(
         "sample_id": sample_id,
         "dataset_id": dataset_id,
 
-        # New schema: query image is inside images dict.
+        # New canonical_schema: query image is inside images dict.
         "images": {
             "query": {
                 "path": image["file_name"],
