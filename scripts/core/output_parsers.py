@@ -43,8 +43,8 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Callable, Literal, Mapping, Sequence
 
-from data.canonical_schema.annotations import InstanceAnnotation
-from data.canonical_schema.geometry import BoundingBox, Point
+from scripts.data.canonical_schema.annotations import InstanceAnnotation
+from scripts.data.canonical_schema.geometry import BoundingBox, Point
 
 AnswerFormat = Literal["tag_bbox_list", "json_bbox_list", "text"]
 CoordsMode = Literal["normalized", "pixel"]

@@ -2,7 +2,7 @@
 
 from abc import ABC, abstractmethod
 from typing import Any
-from data.canonical_schema import DatasetInfo
+from scripts.data.canonical_schema import DatasetInfo
 from transformers import PreTrainedModel, ProcessorMixin
 from scripts.core.output_parsers import model_output_parsing, ParseResult
 

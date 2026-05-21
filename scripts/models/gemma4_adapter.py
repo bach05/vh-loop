@@ -3,7 +3,7 @@ from omegaconf import OmegaConf
 from scripts.core.registry import register_model_adapter
 
 from scripts.models.adapter import VLMAdapter
-from data.canonical_schema import DatasetInfo
+from scripts.data.canonical_schema import DatasetInfo
 from torch import bfloat16 as bf16
 
 @register_model_adapter("gemma4")

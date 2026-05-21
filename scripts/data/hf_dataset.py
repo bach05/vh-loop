@@ -24,10 +24,10 @@ try:
 except Exception:  # pragma: no cover - fallback for lightweight tests
     SFT_CONVERTER_VERSION = "schema_v2_sft_converter_v1"
 
-from canonical_schema.io_utils import read_dataset_info, iter_samples_from_jsonl
-from canonical_schema.dataset_header import DatasetInfo
-from canonical_schema.sample.base import DataSample
-from canonical_schema.sample.single_image import PromptingSchema
+from scripts.data.canonical_schema.io_utils import read_dataset_info, iter_samples_from_jsonl
+from scripts.data.canonical_schema.dataset_header import DatasetInfo
+from scripts.data.canonical_schema.sample.base import DataSample
+from scripts.data.canonical_schema.sample.single_image import PromptingSchema
 
 def sample_to_messages(
     sample: DataSample,
