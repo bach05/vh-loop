@@ -10,7 +10,7 @@ Assets carry a URI, optional caption and instance annotations.
 from abc import ABC
 from pathlib import Path
 from typing import Any, Literal, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from .annotations import InstanceAnnotation
 
@@ -57,6 +57,12 @@ class ImageAsset(Asset):
     type: Literal["image"] = "image"
     size: tuple[int, int]  # (width, height)
     camera_id: Optional[str] = None
+
+    @model_validator(mode="after")
+    def _valid_size(self) -> "ImageAsset":
+        if self.width <= 0 or self.height <= 0:
+            raise ValueError(f"ImageAsset.size must be positive, got {self.size}")
+        return self
 
     @property
     def width(self) -> int:

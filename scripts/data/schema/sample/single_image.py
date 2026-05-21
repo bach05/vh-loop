@@ -5,17 +5,16 @@ from __future__ import annotations
 This module contains sample implementation for prompts with a single image (SI), treated as a query image. 
 """
 
-import json
 from pathlib import Path
 from typing import Any, Literal
 from pydantic import Field, model_validator
 
+from scripts.core.constants import SUPPORTED_PROMPTING_SCHEMAS
 # relative import to project constants and local schema modules
-from ...core.constants import SUPPORTED_PROMPTING_SCHEMAS
 from ..assets import ImageAsset
 from ..annotations import InstanceAnnotation
 from ..dataset_header import DatasetInfo, MessageBuildInfo
-from .base import DataSample, PromptingSchema, make_message
+from .base import DataSample, PromptingSchema, make_message, validate_against_dataset_info
 
 def _target_boxes_from_annotations(
     annotation_list: list[InstanceAnnotation],
@@ -87,12 +86,17 @@ class SISimpleDataSample(DataSample):
         prompting_schema: PromptingSchema = "conversational",
         include_target: bool = True,
         dataset_root: str | Path | None = None,
-        build_info: MessageBuildInfo | None = None,
     ) -> dict[str, Any]:
 
-        # Determine normalization factor: prefer the provided build_info,
-        # otherwise fall back to dataset-level message_build_info and a
-        # sensible default.
+        validate_against_dataset_info(self, dataset_info)
+        build_info = dataset_info.message_build_info
+
+        if build_info.answer_format != "tag_bbox_list":
+            raise ValueError(
+                f"SISimpleDataSample only supports answer_format='tag_bbox_list', "
+                f"got {build_info.answer_format!r}"
+            )
+
         if build_info is not None:
             norm_factor = build_info.normalization_factor
         elif dataset_info and dataset_info.message_build_info is not None:

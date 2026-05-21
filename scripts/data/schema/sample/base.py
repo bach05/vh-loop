@@ -11,10 +11,7 @@ from pathlib import Path
 from typing import Any, TYPE_CHECKING
 from pydantic import BaseModel
 
-# Use a relative import to reach the project's constants module. The
-# number of leading dots goes from the sample package to the scripts
-# package: sample -> schema -> data -> scripts -> core
-from ...core.constants import SUPPORTED_PROMPTING_SCHEMAS
+from scripts.core.constants import SUPPORTED_PROMPTING_SCHEMAS
 
 # Import schema types from the package root (relative import).
 if TYPE_CHECKING:
@@ -42,7 +39,6 @@ class DataSample(BaseModel, ABC):
         prompting_schema: PromptingSchema = "conversational",
         include_target: bool = True,
         dataset_root: str | Path | None = None,
-        build_info: MessageBuildInfo | None = None,
     ) -> dict[str, Any]:
         """Serialize the sample into a prompt/target payload.
 
@@ -56,3 +52,13 @@ class DataSample(BaseModel, ABC):
 
 def make_message(role: str, content: list[dict]) -> dict:
     return {"role": role, "content": content}
+
+def validate_against_dataset_info(self, dataset_info: DatasetInfo) -> None:
+    for asset in self.assets:
+        for ann in asset.annotations:
+            expected_name = dataset_info.label_id_to_name(ann.label_id)
+            if ann.label_name != expected_name:
+                raise ValueError(
+                    f"Annotation {ann.instance_id}: label_id={ann.label_id} "
+                    f"maps to {expected_name!r}, but label_name={ann.label_name!r}"
+                )
