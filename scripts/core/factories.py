@@ -89,7 +89,7 @@ def build_peft_config(peft_cfg):
 
 
 def build_hf_datasets(dataset_cfg, transform_cfg=None, split='training'):
-    from scripts.data.hf_dataset import canonical_manifest_to_hf_sft, TransformedVLMHFDataset
+    from scripts.data.hf_dataset import canonical_jsonl_to_hf_dataset, TransformedVLMHFDataset
     from datasets import concatenate_datasets
 
     logging.info(f"Building HF dataset for data split '{split}'")
@@ -108,9 +108,9 @@ def build_hf_datasets(dataset_cfg, transform_cfg=None, split='training'):
             f"from: {data_jsonl_path}, schema={dataset_schema}"
         )
 
-        dataset_hf = canonical_manifest_to_hf_sft(
+        dataset_hf = canonical_jsonl_to_hf_dataset(
             data_jsonl_path,
-            dataset_schema=dataset_schema,
+            prompting_schema=dataset_schema,
             dataset_root=dataset_root,
             cache_dir=data_cfg.get("hf_cache_dir", None),
             fingerprint_extra={

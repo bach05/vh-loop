@@ -50,16 +50,16 @@ def sample_to_messages(
     )
 
 def iter_data_rows_from_jsonl(
-    manifest_path: str | Path,
+    jsonl_path: str | Path,
     *,
     prompting_schema: PromptingSchema = "conversational",
     dataset_root: str | Path | None = None,
     include_target: bool = True,
 ) -> Iterator[dict[str, Any]]:
     """Yield HF-ready SFT rows from a schema-v2 JSONL manifest."""
-    dataset_info = read_dataset_info(manifest_path)
+    dataset_info = read_dataset_info(jsonl_path)
 
-    for sample in iter_samples_from_jsonl(manifest_path):
+    for sample in iter_samples_from_jsonl(jsonl_path):
         yield sample_to_messages(
             sample,
             dataset_info=dataset_info,
@@ -70,7 +70,7 @@ def iter_data_rows_from_jsonl(
 
 
 def manifest_fingerprint(
-    manifest_path: str | Path,
+    jsonl_path: str | Path,
     *,
     prompting_schema: PromptingSchema = "conversational",
     dataset_root: Optional[str | Path] = None,
@@ -83,13 +83,13 @@ def manifest_fingerprint(
     The fingerprint includes both file identity and conversion options that
     affect the generated rows, including dataset-level message_build_info.
     """
-    path = Path(manifest_path)
+    path = Path(jsonl_path)
     stat = path.stat()
 
     dataset_info = read_dataset_info(path)
 
     payload = {
-        "manifest_path": str(path.resolve()),
+        "jsonl_path": str(path.resolve()),
         "manifest_mtime_ns": stat.st_mtime_ns,
         "manifest_size": stat.st_size,
         "schema_dataset_id": dataset_info.dataset_id,
@@ -101,8 +101,8 @@ def manifest_fingerprint(
     raw = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str)
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]
 
-def canonical_manifest_to_hf_dataset(
-    manifest_path: str | Path,
+def canonical_jsonl_to_hf_dataset(
+    jsonl_path: str | Path,
     *,
     prompting_schema: PromptingSchema = "conversational",
     dataset_root: Optional[str | Path] = None,
@@ -114,7 +114,7 @@ def canonical_manifest_to_hf_dataset(
 
     Parameters
     ----------
-    manifest_path:
+    jsonl_path:
         Path to the JSONL manifest file.
     prompting_schema:
         Preferred name for the output row format, e.g. "conversational" or
@@ -130,7 +130,7 @@ def canonical_manifest_to_hf_dataset(
     """
 
     fingerprint = manifest_fingerprint(
-        manifest_path=manifest_path,
+        jsonl_path=jsonl_path,
         prompting_schema=prompting_schema,
         dataset_root=dataset_root,
         include_target=include_target,
@@ -139,7 +139,7 @@ def canonical_manifest_to_hf_dataset(
 
     return HFDataset.from_generator(
         lambda: iter_data_rows_from_jsonl(
-            manifest_path,
+            jsonl_path,
             prompting_schema=prompting_schema,
             dataset_root=dataset_root,
             include_target=include_target,
@@ -179,6 +179,8 @@ class TransformedVLMHFDataset(Dataset):
     This class keeps the row structure produced by sample_to_message(), but
     replaces example["images"] paths with loaded RGB PIL images or transformed
     arrays/tensors.
+
+    Note: the transform is applied to the image only. Bbox and points are normalized in the prompt construction.
     """
 
     def __init__(self, hf_dataset, transform: Optional[Callable] = None):

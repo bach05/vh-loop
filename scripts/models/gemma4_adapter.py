@@ -3,13 +3,13 @@ from omegaconf import OmegaConf
 from scripts.core.registry import register_model_adapter
 
 from scripts.models.adapter import VLMAdapter
-from scripts.core.output_parsers import parse_out_text_json_objects_to_target
+from data.canonical_schema import DatasetInfo
 from torch import bfloat16 as bf16
 
 @register_model_adapter("gemma4")
 class Gemma4Adapter(VLMAdapter):
 
-    def __init__(self, model_cfg, quantization_config=None):
+    def __init__(self, model_cfg, dataset_info: DatasetInfo, quantization_config=None):
         from transformers import  AutoProcessor, AutoModelForImageTextToText
 
         self.processor = AutoProcessor.from_pretrained(
@@ -37,6 +37,8 @@ class Gemma4Adapter(VLMAdapter):
             model_cfg["model_name_or_path"],
             **model_params,
         )
+
+        self.dataset_info = dataset_info
 
         self.cfg = model_cfg
 

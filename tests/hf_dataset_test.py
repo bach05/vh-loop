@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
-from scripts.data.hf_dataset import canonical_manifest_to_hf_sft
+from scripts.data.hf_dataset import canonical_jsonl_to_hf_dataset
 
-json_file = "/media/iaslab/data_bacchin/panizzolo/paniz_train_04_02_SINGLE.vh_loop.jsonl"
+json_file = "/media/iaslab/data_bacchin/panizzolo/paniz_train_04_02_SINGLE.canonical_v2.jsonl"
 
-dataset_hf = canonical_manifest_to_hf_sft(json_file)
+dataset_hf = canonical_jsonl_to_hf_dataset(json_file)
 
 print(dataset_hf)
 
-print(f'Cahce file: {dataset_hf.cache_files}')
+print(f'Cache file: {dataset_hf.cache_files}')
 print(f'Fingerprint: {dataset_hf._fingerprint}')
 
 #print first row

@@ -8,7 +8,7 @@ cycles when modules are imported from inside the package.
 
 from .geometry import Point, BoundingBox, RLEMask
 from .assets import Asset, ImageAsset, DepthImageAsset
-from .dataset_header import DatasetInfo, SCHEMA_VERSION, MessageBuildInfo
+from .dataset_header import DatasetInfo, SCHEMA_VERSION, MessageBuildInfo, LabelInfo, AnnotationInfo
 from .records import DatasetInfoRecord, DataRecord
 from .annotations import InstanceAnnotation
 from .sample.single_image import SISimpleDataSample, PromptingSchema
@@ -19,9 +19,9 @@ __all__ = [
     # geometries
     "Point", "BoundingBox", "RLEMask",
     # dataset headers
-    "DatasetInfo", "MessageBuildInfo",
+    "DatasetInfo", "MessageBuildInfo", "LabelInfo", "AnnotationInfo",
     #records
-    "DataRecord",
+    "DataRecord", "DatasetInfoRecord",
     # annotations
     "InstanceAnnotation",
     # samples

@@ -1,0 +1,44 @@
+taxonomy_id: panizzolo_motor_scrap_v1
+description: "Labels for motor scrap sorting in Panizzolo facility"
+
+labels:
+  rotor:
+    description: "Metal rotor pieces, often made of steel or iron, which are key components in electric motors."
+    aliases:
+        - rotor_piece
+        - motor_rotor
+    parent_label: metal
+
+  stator:
+    description: "Metal stator pieces, which are the stationary part of electric motors, often made of steel or iron."
+    aliases:
+      - stator_piece
+      - motor_stator
+    parent_label: metal
+
+  shaft:
+    description: "Metal shaft pieces, which are cylindrical components that transmit torque in electric motors, often made of steel."
+    aliases:
+      - shaft_piece
+      - motor_shaft
+    parent_label: metal
+
+  heavy_scrap:
+    description: "Heavy metal scrap pieces that do not fit into the rotor, stator, or shaft categories."
+    aliases:
+      - heavy_metal_scrap
+      - large_metal_piece
+    parent_label: metal
+
+  copper:
+    description: "Copper pieces, often found in electrical components or wiring."
+    aliases:
+      - copper_scrap
+      - copper_piece
+    parent_label: metal
+
+  residual:
+    description: "Non-metallic waste materials that are not recyclable, such as plastic, rubber, or other contaminants."
+    aliases:
+      - non_metal_scrap
+      - waste_residual

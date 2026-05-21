@@ -1,531 +1,495 @@
-import re
+from __future__ import annotations
+
+"""Small output parsers for canonical_schema v2 model answers.
+
+The parser layer is intentionally simple:
+
+- one public entry point: parse_model_output(...)
+- one parser function per answer_format
+- parser functions return InstanceAnnotation objects in pixel coordinates
+
+Current supported formats
+-------------------------
+
+tag_bbox_list
+    Compact bbox tags separated by semicolons:
+
+        <class_name,x1,y1,x2,y2>;<class_name,x1,y1,x2,y2>
+
+    The parser also accepts a pipe-separated variant:
+
+        <class_name|x1|y1|x2|y2>
+
+    Empty prediction:
+
+        <none>
+
+json_bbox_list
+    Optional lightweight JSON support for future use. Accepts either:
+
+        [{"class":"PET_bottle","box":[10,20,30,40]}]
+
+    or:
+
+        [["PET_bottle",10,20,30,40]]
+
+Coordinates are interpreted as normalized by default, because the current
+SISimpleDataSample emits coordinates normalized by MessageBuildInfo.normalization_factor.
+"""
+
 import ast
 import json
-import logging
+import re
+from dataclasses import dataclass, field
+from typing import Any, Callable, Literal, Mapping, Sequence
 
-from typing import List, Any, Dict, Tuple, Optional
+from data.canonical_schema.annotations import InstanceAnnotation
+from data.canonical_schema.geometry import BoundingBox, Point
 
-from data.canonical_schema.schema import Target, Annotation, BoundingBox, Point
-from scripts.core.constants import NORM_SIZE
+AnswerFormat = Literal["tag_bbox_list", "json_bbox_list", "text"]
+CoordsMode = Literal["normalized", "pixel"]
 
 
-def _extract_after_last_channel(s: str) -> str:
-    """
-    Extract content after the last <channel|> marker.
-    If a trailing <turn|> exists, cut before it.
-    """
-    matches = list(re.finditer(r"<channel\|>", s, flags=re.IGNORECASE))
-    if not matches:
+@dataclass
+class ParseResult:
+    """Result returned by parse_model_output."""
+
+    annotations: list[InstanceAnnotation] = field(default_factory=list)
+    cleaned_text: str = ""
+    answer_format: str = ""
+    valid: bool = False
+    has_detection: bool = False
+    is_empty: bool = False
+    errors: list[str] = field(default_factory=list)
+    parsed_items: list[dict[str, Any]] = field(default_factory=list)
+
+    def to_debug_dict(self) -> dict[str, Any]:
+        return {
+            "cleaned_text": self.cleaned_text,
+            "answer_format": self.answer_format,
+            "valid": self.valid,
+            "has_detection": self.has_detection,
+            "is_empty": self.is_empty,
+            "num_instances": len(self.annotations),
+            "errors": self.errors,
+            "parsed_items": self.parsed_items,
+        }
+
+
+def clean_model_text(text: str | None) -> str:
+    """Remove common wrappers while keeping the function intentionally small."""
+
+    if text is None:
         return ""
 
-    tail = s[matches[-1].end():].strip()
+    s = str(text).strip()
 
-    turn_match = re.search(r"<turn\|>", tail, flags=re.IGNORECASE)
-    if turn_match:
-        tail = tail[:turn_match.start()].strip()
+    # Keep only content after final reasoning block if present.
+    if "</think>" in s.lower():
+        parts = re.split(r"</think>", s, flags=re.IGNORECASE)
+        s = parts[-1].strip()
 
-    return tail
+    # Keep only content after final channel marker if present.
+    if "<channel|>" in s.lower():
+        parts = re.split(r"<channel\|>", s, flags=re.IGNORECASE)
+        s = parts[-1].strip()
+        s = re.split(r"<turn\|>", s, flags=re.IGNORECASE)[0].strip()
 
+    # Prefer explicit answer tags.
+    answer_blocks = re.findall(r"<answer>(.*?)</answer>", s, flags=re.DOTALL | re.IGNORECASE)
+    if answer_blocks:
+        s = answer_blocks[-1].strip()
 
-def _extract_after_last_think(s: str) -> str:
-    """
-    Useful for models that output reasoning and then JSON after </think>.
-    """
-    matches = list(re.finditer(r"</think>", s, flags=re.IGNORECASE))
-    if not matches:
-        return ""
+    # Strip a single outer code fence.
+    m = re.match(r"^```(?:json|text)?\s*\n?(.*?)\n?```$", s, flags=re.DOTALL | re.IGNORECASE)
+    if m:
+        s = m.group(1).strip()
 
-    return s[matches[-1].end():].strip()
-
-
-def _unwrap_string_literal(s: str) -> str:
-    s = s.strip()
-    if not s:
-        return s
-
+    # Unwrap quoted string literals, useful when the generation is itself serialized.
     try:
         parsed = ast.literal_eval(s)
         if isinstance(parsed, str):
-            return parsed.strip()
+            s = parsed.strip()
     except Exception:
         pass
 
-    return s
+    return s.strip()
 
 
-def _strip_outer_code_fence(s: str) -> str:
-    s = s.strip()
+def _lookup_label_id(
+    label_name: str,
+    label_name_to_id: Mapping[str, int] | None,
+    *,
+    unknown_label_id: int,
+    strict_labels: bool,
+) -> int:
+    if label_name_to_id is None:
+        return unknown_label_id
 
-    m = re.match(
-        r"^\s*```(?:json)?\s*\n?(.*?)\n?\s*```\s*$",
-        s,
-        flags=re.DOTALL | re.IGNORECASE,
-    )
+    if label_name in label_name_to_id:
+        return int(label_name_to_id[label_name])
 
-    if m:
-        return m.group(1).strip()
+    if strict_labels:
+        raise ValueError(f"Unknown label name: {label_name!r}")
 
-    return s
-
-
-def _extract_fenced_blocks(s: str) -> List[str]:
-    matches = re.findall(
-        r"```(?:json)?\s*(.*?)\s*```",
-        s,
-        flags=re.DOTALL | re.IGNORECASE,
-    )
-
-    return [m.strip() for m in matches if m.strip()]
+    return unknown_label_id
 
 
-def _extract_all_json_array_substrings(s: str) -> List[str]:
-    """
-    Extract all top-level [...] substrings while handling quoted strings.
-    """
-    results = []
-    start = None
-    depth = 0
-    in_string = False
-    string_char = ""
-    escape = False
-
-    for i, ch in enumerate(s):
-        if in_string:
-            if escape:
-                escape = False
-            elif ch == "\\":
-                escape = True
-            elif ch == string_char:
-                in_string = False
-            continue
-
-        if ch in ('"', "'"):
-            in_string = True
-            string_char = ch
-            continue
-
-        if ch == "[":
-            if depth == 0:
-                start = i
-            depth += 1
-
-        elif ch == "]":
-            if depth > 0:
-                depth -= 1
-                if depth == 0 and start is not None:
-                    results.append(s[start:i + 1])
-                    start = None
-
-    return results
-
-
-def _parse_json_list(s: str) -> list[Any]:
-    try:
-        parsed = json.loads(s)
-    except Exception:
-        parsed = None
-
-    if parsed is None:
-        try:
-            parsed = ast.literal_eval(s)
-        except Exception as e:
-            raise ValueError(f"Could not parse content as JSON/list: {e}") from e
-
-    if not isinstance(parsed, list):
-        raise ValueError(f"Parsed object is not a list: {type(parsed)}")
-
-    return parsed
-
-
-def _extract_json_candidates(block: str) -> List[str]:
-    """
-    From a raw text block, extract all plausible JSON array candidates.
-    """
-    s = block.strip()
-    if not s:
-        return []
-
-    s = _unwrap_string_literal(s)
-    s = _strip_outer_code_fence(s)
-
-    candidates: list[str] = []
-
-    if s.startswith("[") and s.endswith("]"):
-        candidates.append(s)
-
-    fenced_blocks = _extract_fenced_blocks(s)
-    for fb in fenced_blocks:
-        fb = _unwrap_string_literal(fb)
-        fb = _strip_outer_code_fence(fb)
-        candidates.extend(_extract_all_json_array_substrings(fb))
-
-    candidates.extend(_extract_all_json_array_substrings(s))
-
-    unique_candidates = []
-    seen = set()
-
-    for c in candidates:
-        c_norm = c.strip()
-        if c_norm not in seen:
-            seen.add(c_norm)
-            unique_candidates.append(c_norm)
-
-    return unique_candidates
-
-
-def _get_label_and_box(item: Dict[str, Any]) -> tuple[Any, Any]:
-    label = None
-    box = None
-
-    for key in ("class", "label", "category", "category_name"):
-        if key in item:
-            label = item[key]
-            break
-
-    for key in ("box", "box_2d", "bbox_2d", "bbox"):
-        if key in item:
-            box = item[key]
-            break
-
-    return label, box
-
-
-def _clip_pixel_bbox(
-        x1: int,
-        y1: int,
-        x2: int,
-        y2: int,
-        img_shape: tuple[int, int]
+def _clip_xyxy_exclusive(
+    x1: int,
+    y1: int,
+    x2: int,
+    y2: int,
+    *,
+    img_width: int,
+    img_height: int,
+    reorder: bool = True,
 ) -> tuple[int, int, int, int]:
+    """Clip xyxy bbox to image bounds using exclusive bottom-right corner."""
 
-    img_w, img_h = img_shape
+    if reorder:
+        x1, x2 = sorted((x1, x2))
+        y1, y2 = sorted((y1, y2))
 
-    x1 = max(0, min(x1, img_w - 1))
-    y1 = max(0, min(y1, img_h - 1))
-    x2 = max(0, min(x2, img_w - 1))
-    y2 = max(0, min(y2, img_h - 1))
-
-    x1, x2 = sorted((x1, x2))
-    y1, y2 = sorted((y1, y2))
+    # tl must lie inside the image. br is exclusive and can be equal to width/height.
+    x1 = max(0, min(x1, img_width - 1))
+    y1 = max(0, min(y1, img_height - 1))
+    x2 = max(1, min(x2, img_width))
+    y2 = max(1, min(y2, img_height))
 
     return x1, y1, x2, y2
 
 
-def _convert_raw_box_to_pixel_bbox(
-        box: list[Any] | tuple[Any, ...],
-        img_shape: tuple[int,int] = None,
-        coords_mode: str = "absolute",
-        norm_factor: int = NORM_SIZE,
-        bbox_format: str = "x1y1x2y2",
+def _coords_to_pixel_bbox(
+    coords: Sequence[Any],
+    *,
+    img_size: tuple[int, int],
+    coords_mode: CoordsMode,
+    norm_factor: int,
 ) -> tuple[int, int, int, int]:
-    if bbox_format == "y1x1y2x2":
-        y1_temp, x1_temp, y2_temp, x2_temp = map(float, box)
-    elif bbox_format == "x1y1x2y2":
-        x1_temp, y1_temp, x2_temp, y2_temp = map(float, box)
-    else:
-        logging.error(
-            "Unsupported bbox_format=%s. Falling back to x1y1x2y2.",
-            bbox_format,
-        )
-        x1_temp, y1_temp, x2_temp, y2_temp = map(float, box)
+    if len(coords) != 4:
+        raise ValueError(f"Expected 4 bbox coordinates, got {coords!r}")
+
+    img_width, img_height = img_size
+    x1, y1, x2, y2 = [float(v) for v in coords]
 
     if coords_mode == "normalized":
-        # This matches your previous behavior:
-        # VLM coordinates are interpreted as independently normalized
-        # over width and height in a 0..norm_factor space.
+        # The training target is produced by x_pixel / image_width * norm_factor.
+        # Invert with image_width/image_height, not width-1/height-1, because bbox.br
+        # follows the exclusive [tl, br) convention.
+        x1 = x1 / norm_factor * img_width
+        y1 = y1 / norm_factor * img_height
+        x2 = x2 / norm_factor * img_width
+        y2 = y2 / norm_factor * img_height
+    elif coords_mode != "pixel":
+        raise ValueError(f"Unsupported coords_mode={coords_mode!r}")
 
-        if img_shape is None:
-            raise ValueError("img_shape must be provided for normalized coordinates mode")
-        img_w, img_h = img_shape
-
-        x1 = int(round(x1_temp / norm_factor * (img_w - 1)))
-        y1 = int(round(y1_temp / norm_factor * (img_h - 1)))
-        x2 = int(round(x2_temp / norm_factor * (img_w - 1)))
-        y2 = int(round(y2_temp / norm_factor * (img_h - 1)))
-
-        return _clip_pixel_bbox(x1, y1, x2, y2)
-
-    elif coords_mode == "absolute":
-        x1 = int(round(x1_temp))
-        y1 = int(round(y1_temp))
-        x2 = int(round(x2_temp))
-        y2 = int(round(y2_temp))
-
-        return x1, y1, x2, y2
-
-    else:
-        raise ValueError(f"Unsupported coords_mode: {coords_mode}")
+    return _clip_xyxy_exclusive(
+        int(round(x1)),
+        int(round(y1)),
+        int(round(x2)),
+        int(round(y2)),
+        img_width=img_width,
+        img_height=img_height,
+    )
 
 
+def _make_annotation(
+    *,
+    label_name: str,
+    coords: Sequence[Any],
+    img_size: tuple[int, int],
+    label_name_to_id: Mapping[str, int] | None,
+    unknown_label_id: int,
+    strict_labels: bool,
+    coords_mode: CoordsMode,
+    norm_factor: int,
+    instance_index: int,
+) -> InstanceAnnotation:
+    label_name = label_name.strip()
+    if not label_name:
+        raise ValueError("Empty label name")
 
-def _annotation_to_text_item(
-        label_str: str,
-        bbox: BoundingBox,
-) -> dict[str, Any]:
-    """
-    Serialize the annotation back to a canonical text target.
+    x1, y1, x2, y2 = _coords_to_pixel_bbox(
+        coords,
+        img_size=img_size,
+        coords_mode=coords_mode,
+        norm_factor=norm_factor,
+    )
 
-    Here the bbox is represented in the canonical_schema coordinate space:
-    normalized 1000x1000 square space.
-    """
-    return {
-        "class": label_str,
-        "bbox": [
-            bbox.tl.x,
-            bbox.tl.y,
-            bbox.br.x,
-            bbox.br.y,
-        ],
-    }
+    if x1 >= x2 or y1 >= y2:
+        raise ValueError(f"Degenerate bbox after conversion: {(x1, y1, x2, y2)}")
 
-def parse_out_text_json_objects_to_target(
+    label_id = _lookup_label_id(
+        label_name,
+        label_name_to_id,
+        unknown_label_id=unknown_label_id,
+        strict_labels=strict_labels,
+    )
+
+    return InstanceAnnotation(
+        instance_id=f"pred_{instance_index:04d}",
+        label_id=label_id,
+        label_name=label_name,
+        bbox=BoundingBox(tl=Point(x=x1, y=y1), br=Point(x=x2, y=y2)),
+        points=None,
+        mask=None,
+        caption=None,
+        attributes={},
+    )
+
+
+# <class_name,x1,y1,x2,y2> or <class_name|x1|y1|x2|y2>
+_TAG_BBOX_RE = re.compile(
+    r"<\s*([A-Za-z0-9_.:-]+)\s*[,|]\s*"
+    r"(-?\d+(?:\.\d+)?)\s*[,|]\s*"
+    r"(-?\d+(?:\.\d+)?)\s*[,|]\s*"
+    r"(-?\d+(?:\.\d+)?)\s*[,|]\s*"
+    r"(-?\d+(?:\.\d+)?)\s*>",
+)
+
+
+def parse_tag_bbox_list(
     text: str,
-    img_size: Tuple[int, int],  # (width, height)
-    active_fallback: bool = True,
-    category_to_id: Optional[Dict[str, int]] = None,
-    coords_mode: str = "absolute",  # "absolute" or "normalized"
-    norm_factor: int = NORM_SIZE,
-    bbox_format: str = "x1y1x2y2",  # "x1y1x2y2" or "y1x1y2x2"
+    *,
+    img_size: tuple[int, int],
+    label_name_to_id: Mapping[str, int] | None = None,
+    coords_mode: CoordsMode = "normalized",
+    norm_factor: int = 1000,
     unknown_label_id: int = -1,
-    source: str = "vlm_json",
-) -> tuple[Target, Dict[str, Any]]:
+    strict_labels: bool = False,
+) -> ParseResult:
+    cleaned = clean_model_text(text)
+    result = ParseResult(cleaned_text=cleaned, answer_format="tag_bbox_list")
+
+    if cleaned == "" or cleaned.lower() in {"<none>", "none", "[]"}:
+        result.valid = True
+        result.is_empty = True
+        return result
+
+    matches = list(_TAG_BBOX_RE.finditer(cleaned))
+    if not matches:
+        result.errors.append("No tag bbox items found. Expected '<class_name,x1,y1,x2,y2>'.")
+        return result
+
+    for idx, match in enumerate(matches):
+        label_name = match.group(1)
+        raw_coords = match.groups()[1:]
+        try:
+            ann = _make_annotation(
+                label_name=label_name,
+                coords=raw_coords,
+                img_size=img_size,
+                label_name_to_id=label_name_to_id,
+                unknown_label_id=unknown_label_id,
+                strict_labels=strict_labels,
+                coords_mode=coords_mode,
+                norm_factor=norm_factor,
+                instance_index=idx,
+            )
+            result.annotations.append(ann)
+            result.parsed_items.append(
+                {
+                    "label_name": ann.label_name,
+                    "label_id": ann.label_id,
+                    "raw_coords": list(raw_coords),
+                    "pixel_bbox_xyxy": [
+                        ann.bbox.tl.x,
+                        ann.bbox.tl.y,
+                        ann.bbox.br.x,
+                        ann.bbox.br.y,
+                    ] if ann.bbox is not None else None,
+                }
+            )
+        except Exception as exc:
+            result.errors.append(f"Could not parse tag item {idx}: {match.group(0)!r} ({exc})")
+
+    result.has_detection = len(result.annotations) > 0
+    result.valid = result.has_detection or not result.errors
+    return result
+
+
+def _extract_json_array(text: str) -> str:
+    cleaned = clean_model_text(text)
+    if cleaned.startswith("[") and cleaned.endswith("]"):
+        return cleaned
+
+    # Small fallback: find the first [...] block. This is enough for noisy wrappers
+    # without reintroducing the previous large extraction stack.
+    m = re.search(r"\[.*\]", cleaned, flags=re.DOTALL)
+    if not m:
+        raise ValueError("No JSON array found")
+    return m.group(0)
+
+
+def parse_json_bbox_list(
+    text: str,
+    *,
+    img_size: tuple[int, int],
+    label_name_to_id: Mapping[str, int] | None = None,
+    coords_mode: CoordsMode = "normalized",
+    norm_factor: int = 1000,
+    unknown_label_id: int = -1,
+    strict_labels: bool = False,
+) -> ParseResult:
+    cleaned = clean_model_text(text)
+    result = ParseResult(cleaned_text=cleaned, answer_format="json_bbox_list")
+
+    if cleaned == "" or cleaned.lower() in {"<none>", "none"}:
+        result.valid = True
+        result.is_empty = True
+        return result
+
+    try:
+        raw = _extract_json_array(cleaned)
+        parsed = json.loads(raw)
+    except Exception:
+        try:
+            parsed = ast.literal_eval(_extract_json_array(cleaned))
+        except Exception as exc:
+            result.errors.append(f"Could not parse JSON bbox list: {exc}")
+            return result
+
+    if parsed == []:
+        result.valid = True
+        result.is_empty = True
+        return result
+
+    if not isinstance(parsed, list):
+        result.errors.append(f"Expected list, got {type(parsed).__name__}")
+        return result
+
+    for idx, item in enumerate(parsed):
+        try:
+            if isinstance(item, dict):
+                label = item.get("class") or item.get("label") or item.get("category")
+                coords = item.get("box") or item.get("bbox") or item.get("bbox_2d")
+            elif isinstance(item, (list, tuple)) and len(item) == 5:
+                label, *coords = item
+            else:
+                raise ValueError(f"Unsupported item shape: {item!r}")
+
+            if label is None or coords is None:
+                raise ValueError(f"Missing label or bbox in item: {item!r}")
+
+            ann = _make_annotation(
+                label_name=str(label),
+                coords=coords,
+                img_size=img_size,
+                label_name_to_id=label_name_to_id,
+                unknown_label_id=unknown_label_id,
+                strict_labels=strict_labels,
+                coords_mode=coords_mode,
+                norm_factor=norm_factor,
+                instance_index=idx,
+            )
+            result.annotations.append(ann)
+            result.parsed_items.append(
+                {
+                    "label_name": ann.label_name,
+                    "label_id": ann.label_id,
+                    "raw_item": item,
+                    "pixel_bbox_xyxy": [
+                        ann.bbox.tl.x,
+                        ann.bbox.tl.y,
+                        ann.bbox.br.x,
+                        ann.bbox.br.y,
+                    ] if ann.bbox is not None else None,
+                }
+            )
+        except Exception as exc:
+            result.errors.append(f"Could not parse JSON item {idx}: {exc}")
+
+    result.has_detection = len(result.annotations) > 0
+    result.valid = result.has_detection or not result.errors
+    return result
+
+
+def parse_text_output(text: str, **_: Any) -> ParseResult:
+    """Generic text parser for pretraining-style answers with no geometry."""
+
+    cleaned = clean_model_text(text)
+    return ParseResult(
+        annotations=[],
+        cleaned_text=cleaned,
+        answer_format="text",
+        valid=bool(cleaned),
+        has_detection=False,
+        is_empty=not bool(cleaned),
+    )
+
+
+PARSERS: dict[str, Callable[..., ParseResult]] = {
+    "tag_bbox_list": parse_tag_bbox_list,
+    "json_bbox_list": parse_json_bbox_list,
+    "text": parse_text_output,
+}
+
+
+def model_output_parsing(
+    text: str,
+    *,
+    img_size: tuple[int, int],
+    answer_format: AnswerFormat = "tag_bbox_list",
+    label_name_to_id: Mapping[str, int] | None = None,
+    coords_mode: CoordsMode = "normalized",
+    norm_factor: int = 1000,
+    unknown_label_id: int = -1,
+    strict_labels: bool = False,
+) -> ParseResult:
+    """Parse a model answer according to answer_format.
+
+    Parameters
+    ----------
+    text:
+        Raw model output.
+    img_size:
+        Image size as (width, height).
+    answer_format:
+        Parser key. Current primary format is "tag_bbox_list".
+    label_name_to_id:
+        Optional mapping from canonical class token to label id.
+    coords_mode:
+        "normalized" for normalized VLM answers; "pixel" for raw pixel outputs.
+    norm_factor:
+        Coordinate normalization factor used during target generation.
+    unknown_label_id:
+        Label id to use for unknown labels when strict_labels=False.
+    strict_labels:
+        If True, unknown labels raise parsing errors. If False, they receive
+        unknown_label_id.
     """
-    Parse VLM text output containing JSON detections and convert it to the
-    canonical VLM dataset canonical_schema.
 
-    Expected examples:
+    parser = PARSERS.get(answer_format)
+    if parser is None:
+        raise ValueError(f"Unsupported answer_format={answer_format!r}. Available: {sorted(PARSERS)}")
 
-        <answer>
-        [
-            {"label": "stator", "bbox_2d": [442, 456, 505, 570]},
-            {"label": "rotor", "bbox_2d": [512, 452, 558, 538]}
-        ]
-        </answer>
-
-    or:
-
-        ```json
-        [
-            {"class": "stator", "box": [442, 456, 505, 570]}
-        ]
-        ```
-
-    The returned Target contains:
-        target.text      -> cleaned JSON string
-        target.instances -> list[Annotation]
-
-    The returned debug dictionary contains parse diagnostics.
-    """
-
-    if text is None:
-        text = ""
-
-    if category_to_id is None:
-        category_to_id = {}
-
-    img_w, img_h = img_size
-
-    target = Target()
-
-    debug: Dict[str, Any] = {
-        "raw_text": text,
-        "answer_blocks": [],
-        "normalized_blocks": [],
-        "parse_errors": [],
-        "valid_sample": True,
-        "has_detection": False,
-        "used_fallback_after_channel": False,
-        "used_fallback_after_think": False,
-        "active_fallback": active_fallback,
-        "coords_mode": coords_mode,
-        "norm_factor": norm_factor,
-        "bbox_format": bbox_format,
-        "img_size_wh": (img_w, img_h),
-    }
-
-    answer_blocks = re.findall(
-        r"<answer>(.*?)</answer>",
+    return parser(
         text,
-        flags=re.DOTALL | re.IGNORECASE,
+        img_size=img_size,
+        label_name_to_id=label_name_to_id,
+        coords_mode=coords_mode,
+        norm_factor=norm_factor,
+        unknown_label_id=unknown_label_id,
+        strict_labels=strict_labels,
     )
 
-    debug["answer_blocks"] = answer_blocks
-
-    candidate_blocks: list[str] = []
-
-    if answer_blocks:
-        candidate_blocks.extend(answer_blocks)
-    else:
-        if active_fallback:
-            after_channel = _extract_after_last_channel(text)
-            if after_channel:
-                candidate_blocks.append(after_channel)
-                debug["used_fallback_after_channel"] = True
-
-            after_think = _extract_after_last_think(text)
-            if after_think:
-                candidate_blocks.append(after_think)
-                debug["used_fallback_after_think"] = True
-
-        if not candidate_blocks:
-            candidate_blocks.append(text)
-
-    saw_explicit_empty = False
-    saw_empty_json_prediction = False
-    canonical_text_items: list[dict[str, Any]] = []
-
-    for i, block in enumerate(candidate_blocks):
-        block_stripped = block.strip()
-
-        if block_stripped == "":
-            saw_explicit_empty = True
-            continue
-
-        json_candidates = _extract_json_candidates(block_stripped)
-        debug["normalized_blocks"].append(json_candidates)
-
-        if not json_candidates:
-            debug["parse_errors"].append(
-                f"Could not find a JSON array in block {i}: {block!r}"
-            )
-            continue
-
-        parsed = None
-        chosen_candidate = None
-
-        for candidate in json_candidates:
-            try:
-                maybe_parsed = _parse_json_list(candidate)
-                if isinstance(maybe_parsed, list):
-                    parsed = maybe_parsed
-                    chosen_candidate = candidate
-                    break
-            except Exception as e:
-                debug["parse_errors"].append(
-                    f"Candidate parse failed in block {i}: {candidate!r} ({e})"
-                )
-
-        if parsed is None:
-            debug["parse_errors"].append(
-                f"Could not parse any JSON array candidate in block {i}: "
-                f"{json_candidates!r}"
-            )
-            continue
-
-        if parsed == []:
-            saw_empty_json_prediction = True
-            break
-
-        for j, item in enumerate(parsed):
-            if not isinstance(item, dict):
-                debug["parse_errors"].append(
-                    f"Item {j} in block {i} is not a dict: {item!r}"
-                )
-                continue
-
-            label, box = _get_label_and_box(item)
-
-            if label is None:
-                debug["parse_errors"].append(
-                    f"Item {j} in block {i} has no class/label/category field: "
-                    f"{item!r}"
-                )
-                continue
-
-            if box is None:
-                debug["parse_errors"].append(
-                    f"Item {j} in block {i} has no box/bbox_2d/bbox field: "
-                    f"{item!r}"
-                )
-                continue
-
-            if not isinstance(box, (list, tuple)) or len(box) != 4:
-                debug["parse_errors"].append(
-                    f"Invalid box in item {j} of block {i}: {box!r}"
-                )
-                continue
-
-            try:
-                x1, y1, x2, y2 = _convert_raw_box_to_pixel_bbox(
-                    box,
-                    img_shape=(img_w, img_h),
-                    coords_mode=coords_mode,
-                    norm_factor=norm_factor,
-                )
-
-                if x1 >= x2 or y1 >= y2:
-                    debug["parse_errors"].append(
-                        f"Degenerate bbox after conversion in item {j} of block {i}: "
-                        f"{(x1, y1, x2, y2)} from raw box {box!r}"
-                    )
-                    continue
-
-                bbox = BoundingBox(
-                    tl=Point(x=x1, y=y1),
-                    br=Point(x=x2, y=y2),
-                )
-
-                label_str = str(label).strip()
-                label_id = category_to_id.get(label_str, unknown_label_id)
-
-                ann = Annotation(
-                    label=label_id,
-                    bbox=bbox,
-                    point=None,
-                    mask=None,
-                    source=source,
-                )
-
-                target.instances.append(ann)
-                canonical_text_items.append(
-                    _annotation_to_text_item(label_str=label_str, bbox=bbox)
-                )
-
-                debug.setdefault("parsed_items", []).append(
-                    {
-                        "answer_index": i,
-                        "bbox_index_in_answer": j,
-                        "label": label_str,
-                        "label_id": label_id,
-                        "raw_item": item,
-                        "raw_box": box,
-                        "pixel_bbox_xyxy": [x1, y1, x2, y2],
-                        "canonical_bbox_xyxy": [
-                            bbox.tl.x,
-                            bbox.tl.y,
-                            bbox.br.x,
-                            bbox.br.y,
-                        ],
-                        "raw_json_candidate": chosen_candidate,
-                    }
-                )
-
-            except Exception as e:
-                debug["parse_errors"].append(
-                    f"Error while converting item {j} in block {i}: "
-                    f"{item!r} ({e})"
-                )
-
-        if target.instances or saw_empty_json_prediction:
-            break
-
-    if saw_empty_json_prediction:
-        target.text = "[]"
-    else:
-        target.text = json.dumps(
-            canonical_text_items,
-            ensure_ascii=False,
-            separators=(",", ":"),
-        )
-
-    debug["num_instances"] = len(target.instances)
-    debug["explicit_empty_answer"] = saw_explicit_empty
-    debug["explicit_empty_json_prediction"] = saw_empty_json_prediction
-    debug["has_detection"] = len(target.instances) > 0
-    debug["valid_sample"] = (
-        debug["has_detection"]
-        or saw_explicit_empty
-        or saw_empty_json_prediction
-    )
-
-    return target, debug
+#
+# # Backward-compatible convenience alias for the current format.
+# def parse_tag_bbox_output(
+#     text: str,
+#     *,
+#     img_size: tuple[int, int],
+#     label_name_to_id: Mapping[str, int] | None = None,
+#     norm_factor: int = 1000,
+#     strict_labels: bool = False,
+# ) -> ParseResult:
+#     return parse_model_output(
+#         text,
+#         img_size=img_size,
+#         answer_format="tag_bbox_list",
+#         label_name_to_id=label_name_to_id,
+#         coords_mode="normalized",
+#         norm_factor=norm_factor,
+#         strict_labels=strict_labels,
+#     )

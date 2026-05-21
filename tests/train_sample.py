@@ -5,6 +5,7 @@ import os
 from scripts.core.factories import build_peft_config, build_hf_datasets
 from scripts.core.factories import DatasetBuildError
 from scripts.data.utils import train_val_split
+from scripts.data.canonical_schema.io_utils import read_dataset_info
 
 import scripts.models  # Ensure model adapters are registered
 from scripts.core.registry import get_model_adapter
@@ -35,6 +36,11 @@ def main(cfg: DictConfig) -> None:
 
     #Load data
 
+    dataset_info = read_dataset_info(cfg.dataset.training[0].jsonl_path)
+    logging.info(f"Dataset info loaded: {dataset_info.dataset_id}, {dataset_info.message_build_info}")
+    # NB: HERE WE ARE ASSUMING ALL THE DATASET TO FOLLOW THE SAME SCHEMA, BUT NOBODY IS CHECKING.
+    # In general some fields may be different, while some fields must agree.
+
     train_dataset = build_hf_datasets(cfg.dataset, transform_cfg=cfg.transform, split='training')
     try:
         valid_dataset = build_hf_datasets(cfg.dataset, transform_cfg=cfg.transform, split='validation')
@@ -46,7 +52,10 @@ def main(cfg: DictConfig) -> None:
     logging.info(f"Validation dataset size: {len(valid_dataset)}")
 
     #Model config
-    adapter = get_model_adapter(cfg.model.adapter, model_cfg=cfg.model.params, quantization_config=cfg.get('quantization', None))
+    adapter = get_model_adapter(cfg.model.adapter,
+                                model_cfg=cfg.model.params,
+                                dataset_info=dataset_info,
+                                quantization_config=cfg.get('quantization', None))
 
     #memory footprint
     logging.info(f"Model memory footprint: {adapter.get_memory_footprint():.2f} GB VRAM")

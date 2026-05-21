@@ -1,32 +1,99 @@
--   coco_json: /media/iaslab/data_bacchin/panizzolo/paniz_test_03_30_SINGLE.json
-    output_jsonl: /media/iaslab/data_bacchin/panizzolo/paniz_test_03_30_SINGLE.vh_loop.jsonl
-    dataset_id: paniz_test_03_30_single
-    split: test
-    description: "Panizzolo conveyor belt dataset with motor part instance annotations."
-    annotation_source: human
-    prompt_strategy: simple_prompt
-    target_strategy: bbox_json_norm1000
-    drop_empty: false
-    include_categories: null  # null means keep all categories.Otherwise use, for example: [1, 2]
+# COCO -> canonical_schema v2 conversion.
+# Output format:
+#   line 1: DatasetInfoRecord
+#   line 2+: DataRecord(sample=SISimpleDataSample(...))
+#
+# Notes:
+# - Bounding boxes are stored in pixel coordinates in the canonical JSONL.
+# - During training conversion, SISimpleDataSample.sample_to_message() normalizes
+#   them to normalization_factor x normalization_factor and emits tag_bbox_list:
+#   <class_name,x1,y1,x2,y2>;...
+# - Class names must be compact tokens without spaces. By default, COCO category
+#   names are sanitized by replacing invalid characters/spaces with underscores.
 
--   coco_json: /media/iaslab/data_bacchin/panizzolo/paniz_train_04_02_SINGLE.json
-    output_jsonl: /media/iaslab/data_bacchin/panizzolo/paniz_train_04_02_SINGLE.vh_loop.jsonl
-    dataset_id: panizzolo_train_04_02_single
-    split: train
-    description: "Panizzolo conveyor belt dataset with motor part instance annotations."
-    annotation_source: human
-    prompt_strategy: simple_prompt
-    target_strategy: bbox_json_norm1000
-    drop_empty: false
-    include_categories: null  # null means keep all categories.Otherwise use, for example: [1, 2]
+- coco_json: /media/iaslab/data_bacchin/panizzolo/paniz_test_03_30_SINGLE.json
+  output_jsonl: /media/iaslab/data_bacchin/panizzolo/paniz_test_03_30_SINGLE.canonical_v2.jsonl
+  dataset_id: paniz_test_03_30_single
+  split: test
+  description: "Collect at Panizzolo facility for motor scrap sorting. "
+  domain: waste_sorting
 
--   coco_json: /media/iaslab/data_bacchin/panizzolo/paniz_04_16_SINGLE.json
-    output_jsonl: /media/iaslab/data_bacchin/panizzolo/paniz_04_16_SINGLE.vh_loop.jsonl
-    dataset_id: panizzolo_train_04_16_single
-    split: train
-    description: "Panizzolo conveyor belt dataset with motor part instance annotations."
-    annotation_source: human
-    prompt_strategy: simple_prompt
-    target_strategy: bbox_json_norm1000
-    drop_empty: false
-    include_categories: null  # null means keep all categories.Otherwise use, for example:
+  annotation_source: human
+  annotation_quality: good
+
+  sample_type: si_simple_data
+  prompt_template_version: single_image_dataset_level_prompt_generation
+  answer_format: tag_bbox_list
+  normalization_factor: 1000
+
+  drop_empty: false
+
+  skip_invalid_bboxes: false
+  include_instance_metadata: false
+  generate_center_points: true
+
+  sanitize_label_names: true
+  label_name_overrides: null
+  label_descriptions_yaml: /home/bacchin/vh-loop_env/vh-loop/configs/converters/panizzolo/panizzolo_motor_scrap_v1.yaml
+  require_label_descriptions: true
+
+  sample_id_strategy: image_id
+  sample_id_prefix: null
+
+- coco_json: /media/iaslab/data_bacchin/panizzolo/paniz_train_04_02_SINGLE.json
+  output_jsonl: /media/iaslab/data_bacchin/panizzolo/paniz_train_04_02_SINGLE.canonical_v2.jsonl
+  dataset_id: panizzolo_train_04_02_single
+  split: train
+  description: "Collect at Panizzolo facility for motor scrap sorting. "
+  domain: waste_sorting
+
+  annotation_source: human
+  annotation_quality: good
+
+  sample_type: si_simple_data
+  prompt_template_version: single_image_dataset_level_prompt_generation
+  answer_format: tag_bbox_list
+  normalization_factor: 1000
+
+  drop_empty: false
+
+  skip_invalid_bboxes: true
+  include_instance_metadata: false
+  generate_center_points: true
+
+  sanitize_label_names: true
+  label_name_overrides: null
+  label_descriptions_yaml: /home/bacchin/vh-loop_env/vh-loop/configs/converters/panizzolo/panizzolo_motor_scrap_v1.yaml
+  require_label_descriptions: true
+
+  sample_id_strategy: image_id
+  sample_id_prefix: null
+
+- coco_json: /media/iaslab/data_bacchin/panizzolo/paniz_04_16_SINGLE.json
+  output_jsonl: /media/iaslab/data_bacchin/panizzolo/paniz_04_16_SINGLE.canonical_v2.jsonl
+  dataset_id: panizzolo_train_04_16_single
+  split: train
+  description: "Collect at Panizzolo facility for motor scrap sorting. "
+  domain: waste_sorting
+
+  annotation_source: human
+  annotation_quality: good
+
+  sample_type: si_simple_data
+  prompt_template_version: single_image_dataset_level_prompt_generation
+  answer_format: tag_bbox_list
+  normalization_factor: 1000
+
+  drop_empty: false
+
+  skip_invalid_bboxes: true
+  include_instance_metadata: false
+  generate_center_points: true
+
+  sanitize_label_names: true
+  label_name_overrides: null
+  label_descriptions_yaml: /home/bacchin/vh-loop_env/vh-loop/configs/converters/panizzolo/panizzolo_motor_scrap_v1.yaml
+  require_label_descriptions: true
+
+  sample_id_strategy: image_id
+  sample_id_prefix: null

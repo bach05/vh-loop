@@ -2,14 +2,15 @@
 
 from abc import ABC, abstractmethod
 from typing import Any
-from data.canonical_schema.schema import Target
+from data.canonical_schema import DatasetInfo
 from transformers import PreTrainedModel, ProcessorMixin
-from scripts.core.output_parsers import parse_out_text_json_objects_to_target
+from scripts.core.output_parsers import model_output_parsing, ParseResult
 
 
 class VLMAdapter(ABC):
     model: PreTrainedModel
     processor: ProcessorMixin
+    dataset_info: DatasetInfo
 
     @abstractmethod
     def collate_fn(self, examples) -> dict:
@@ -19,8 +20,14 @@ class VLMAdapter(ABC):
     def get_peft_target_modules(self, cfg: dict = None) -> list[str]:
         pass
 
-    def parse_model_output(self, text: str, img_size: tuple[int, int], cat_to_id: dict[str, int]) -> tuple[Target, dict]:
-        return parse_out_text_json_objects_to_target(text, img_size, category_to_id=cat_to_id)
+    def parse_model_output(self, model_output: str, img_size: tuple[int, int], **kwargs) -> ParseResult:
+        return model_output_parsing(
+            model_output,
+            img_size=img_size,
+            answer_format=self.dataset_info.message_build_info.answer_format,
+            norm_factor=self.dataset_info.message_build_info.normalization_factor,
+            **kwargs
+        )
 
     def get_model_and_processor(self, cfg: dict) -> tuple[Any, Any]:
         return self.model, self.processor

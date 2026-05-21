@@ -53,7 +53,7 @@ class AnnotationInfo(BaseModel):
     """Compact provenance / quality information for labels, captions or geometries."""
 
     source_type: Literal["human", "ai", "ai_human_reviewed", "synthetic", "imported", "web_scrap"] = "imported"
-    quality: Literal["raw", "weak", "auto", "reviewed", "gold"] = "raw"
+    quality: Literal["raw", "weak", "auto", "reviewed", "good", "gold"] = "raw"
     notes: Optional[str] = None
 
 class MessageBuildInfo(BaseModel):
