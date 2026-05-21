@@ -36,9 +36,3 @@ labels:
       - copper_scrap
       - copper_piece
     parent_label: metal
-
-  residual:
-    description: "Non-metallic waste materials that are not recyclable, such as plastic, rubber, or other contaminants."
-    aliases:
-      - non_metal_scrap
-      - waste_residual
