@@ -28,140 +28,239 @@ The folder structure of the VLM-Human Loop project is organized as follows:
 
 We define a **canonical multimodal sample** that reflects the structure of a JSONL file. From the canonical format you can export the datasets in different formats (HF Datasets, COCO format, LabelStudio Format, etc… )
 
-The data schema contains the base informative elements of the dataset. We use `VLMSample` as a container for a data sample. A dataset is a list of `VLMSample`. It should include:
-- `dataset_id`:  identifier of the dataset, e.g. `panizzolo_2026-03-30`
-- `sample_id`: identifier of the sample in the dataset, integer
-- `query_image`: image where to detect targets
-- `images`: list of additional images to be used to build the prompt, optional
-- ~~`videos`: list of videos to be used to build the prompt, optional~~
-- `messages`: the chat to prompt the VLM: what to detect, description of the target objects, example images (optional), etc… and instruction to generate the bbox (classes, format).
-- `target`: the prediction target, to be updated step by step.
-    - `text`:  a short answer (like just the bboxes) or a reasoning for the CoT.
-    - `instances`: bbox, mask, points (initialized with the mask centroid)
-    - `semantic_mask`: a semantic mask of the target objects
-- `metadata`: additional metadata about the sample, e.g. the source of the data, the date of collection, etc…
-
-### Schema Visualization 
-
-![Data Schema](./media/data_schema.png)
+### Schema Visualization
 
 <details>
-  <summary>Click to visualize mermaid source code</summary>
+  <summary>Click to visualize data schema diagram</summary>
 
 ```mermaid
+%% data_schema_current_code_v2.mmd
+%% Mermaid schema generated from the current uploaded codebase.
+%% Focus: current implementation, not the broader target architecture.
+
 classDiagram
-    class DatasetInfoRecord {
-        record_type = "dataset_info"
-        schema_version: str
-        info: DatasetInfo
-    }
+direction TB
 
-    class DatasetInfo {
-        dataset_id: str
-        description: str?
-        annotation_source: str?
-        has_semantic_masks: bool
-        has_point: bool
-        has_bbox: bool
-        date_collected: str?
-        label_info: dict[str, str]
-    }
+%% =========================
+%% Dataset header / records
+%% =========================
 
-    class SampleRecord {
-        record_type = "sample"
-        schema_version: str
-    }
+class DatasetInfoRecord {
+  +Literal record_type = "dataset_info"
+  +str schema_version
+  +DatasetInfo info
+}
 
-    class VLMSample {
-        sample_id: int
-        dataset_id: str
-        query_image: Image
-        images: dict[str, Image]
-        messages: list[Message]
-        target: Target?
-        metadata: dict[str, Any]
-    }
+class DataRecord {
+  +Literal record_type = "sample"
+  +SampleUnion sample
+}
 
-    class ImageAsset {
-        path: str
-        size: tuple[int, int]
-        width: property
-        height: property
-    }
+class DatasetInfo {
+  +str dataset_id
+  +Optional~str~ description
+  +Optional~AnnotationInfo~ annotation_info
+  +Optional~str~ domain
+  +Optional~str~ split
+  +Optional~str~ date_collected
+  +Optional~str~ date_last_update
+  +dict~str,LabelInfo~ label_info
+  +MessageBuildInfo message_build_info
+  +dict~str,Any~ metadata
+  +label_name_to_id(label_name) int|str
+  +label_id_to_name(label_id) str
+}
 
-    class Message {
-        role: "system" | "user" | "assistant"
-        content: list[MessageContent]
-    }
+class LabelInfo {
+  +int|str label_id
+  +str label_name
+  +Optional~str~ description
+  +list~str~ aliases
+  +Optional~str~ parent_label
+  +_validate_label_name() LabelInfo
+}
 
-    class TextContent {
-        type = "text"
-        text: str
-    }
+class AnnotationInfo {
+  +source_type source_type
+  +quality quality
+  +Optional~str~ notes
+}
 
-    class ImageContent {
-        type = "image"
-        image_id: str
-    }
+class MessageBuildInfo {
+  +str prompt_template_version
+  +answer_format answer_format
+  +int normalization_factor
+  +dict~str,Any~ metadata
+}
 
-    class Target {
-        text: str?
-        instances: list[Annotation]
-    }
+DatasetInfoRecord *-- DatasetInfo : info
+DatasetInfo *-- LabelInfo : label_info
+DatasetInfo o-- AnnotationInfo : annotation_info
+DatasetInfo *-- MessageBuildInfo : message_build_info
 
-    class Annotation {
-        label: int
-        bbox: BoundingBox?
-        point: Point?
-        mask: RLEMask?
-        source: str?
-    }
+%% =========================
+%% Polymorphic sample parsing
+%% =========================
 
-    class BoundingBox {
-        tl: Point
-        br: Point
-        width: property
-        height: property
-        area()
-    }
+class SampleUnion {
+  <<discriminated union>>
+  +discriminator sample_type
+  +SISimpleDataSample
+}
 
-    class Point {
-        x: int
-        y: int
-        from_pixel()
-        to_pixel()
-    }
+DataRecord --> SampleUnion : sample
+SampleUnion --> SISimpleDataSample : currently supports
 
-    class RLEMask {
-        counts: list[int] | str
-        size: tuple[int, int]
-        to_binary_mask()
-        from_binary_mask()
-        centroid()
-    }
+%% =========================
+%% Data samples
+%% =========================
 
-    DatasetInfoRecord --> DatasetInfo
-    SampleRecord --|> VLMSample
-    VLMSample --> ImageAsset : query_image
-    VLMSample --> ImageAsset : images
-    VLMSample --> Message : messages
-    VLMSample --> Target : target
-    Message --> TextContent : content option
-    Message --> ImageContent : content option
-    Target --> Annotation
-    Annotation --> BoundingBox
-    Annotation --> Point
-    Annotation --> RLEMask
-    BoundingBox --> Point : tl
-    BoundingBox --> Point : br
+class DataSample {
+  <<abstract>>
+  +str sample_type
+  +str sample_id
+  +sample_to_message(dataset_info, prompting_schema, include_target, dataset_root, build_info) dict
+}
+
+class SISimpleDataSample {
+  +Literal sample_type = "si_simple_data"
+  +list~ImageAsset~ assets
+  +_check_annotations() SISimpleDataSample
+  +build_dataset_level_description(dataset_info) str
+  +build_prompt(dataset_info) str
+  +sample_to_message(dataset_info, prompting_schema, include_target, dataset_root, build_info) dict
+}
+
+DataSample <|-- SISimpleDataSample
+SISimpleDataSample *-- ImageAsset : assets exactly 1
+SISimpleDataSample ..> DatasetInfo : builds prompt from label_info
+SISimpleDataSample ..> MessageBuildInfo : uses normalization_factor
+SISimpleDataSample ..> InstanceAnnotation : serializes asset.annotations
+SISimpleDataSample ..> PromptingSchema : conversational / prompt-completion
+
+class PromptingSchema {
+  <<alias>>
+  SUPPORTED_PROMPTING_SCHEMAS
+}
+
+%% =========================
+%% Assets
+%% =========================
+
+class Asset {
+  <<abstract>>
+  +str type
+  +str uri
+  +Optional~str~ caption
+  +list~InstanceAnnotation~ annotations
+  +dict~str,Any~ metadata
+  +resolve_path(dataset_root) str
+}
+
+class ImageAsset {
+  +Literal type = "image"
+  +tuple~int,int~ size
+  +Optional~str~ camera_id
+  +width int
+  +height int
+}
+
+class DepthImageAsset {
+  +Literal type = "depth"
+}
+
+Asset <|-- ImageAsset
+ImageAsset <|-- DepthImageAsset
+Asset *-- InstanceAnnotation : annotations
+
+%% =========================
+%% Annotations
+%% =========================
+
+class InstanceAnnotation {
+  +str instance_id
+  +int label_id
+  +str label_name
+  +Optional~BoundingBox~ bbox
+  +Optional~list~Point~~ points
+  +Optional~RLEMask~ mask
+  +Optional~str~ caption
+  +dict~str,str~ attributes
+}
+
+InstanceAnnotation o-- BoundingBox : bbox
+InstanceAnnotation o-- Point : points
+InstanceAnnotation o-- RLEMask : mask
+InstanceAnnotation ..> LabelInfo : label_id / label_name refer to label_info
+
+%% =========================
+%% Geometry
+%% =========================
+
+class Geometry {
+  <<abstract>>
+  +to_text(**kwargs) str
+}
+
+class Point {
+  +int x
+  +int y
+  +Optional~bool~ is_positive
+  +normalize(img_width, img_height, norm_factor) tuple
+  +to_text(img_width, img_height, norm_factor) str
+}
+
+class BoundingBox {
+  +Point tl
+  +Point br
+  +Literal format = "xyxy"
+  +width float
+  +height float
+  +area() float
+  +normalize(img_width, img_height, norm_factor) tuple
+  +to_text(img_width, img_height, norm_factor) str
+  +_valid() BoundingBox
+}
+
+class RLEMask {
+  +list~int~|str counts
+  +tuple~int,int~ size
+  +to_binary_mask()
+  +from_binary_mask(mask) RLEMask
+  +to_text() str
+}
+
+Geometry <|-- Point
+Geometry <|-- BoundingBox
+Geometry <|-- RLEMask
+BoundingBox *-- Point : tl
+BoundingBox *-- Point : br
+
+%% =========================
+%% Current message flow
+%% =========================
+
+SISimpleDataSample --> TrainingRow : sample_to_message()
+
+class TrainingRow {
+  <<dict>>
+  conversational: messages + images
+  prompt-completion: prompt + completion + images
+}
+
+note for SISimpleDataSample "Single-image dataset-level prompt strategy.\nPrompt is built from DatasetInfo.label_info.\nTarget is compact tag bbox list:\n<class_name,x1,y1,x2,y2>;...\nCoordinates are normalized using MessageBuildInfo.normalization_factor."
+
+note for DataRecord "DataRecord stores a discriminated SampleUnion.\nThe active discriminator is sample.sample_type."
+
+note for LabelInfo "label_name is validated as compact token without spaces:\n^[A-Za-z0-9_.:-]+$"
+
 ```
 </details>
 
 A dataset is stored in a JSONL file, where each line is a JSON object record:
 
 ```json
-{"record_type":"dataset_info","schema_version":"vlmdojo.dataset.v1","info":{...}}
-{"record_type":"sample","sample_id":1,"dataset_id":"...","images":{...},"messages":[...],"target":{...},"metadata":{...}}
+TO DO
 ```
 
 # Train, Test, and Compare (Hydra entrypoints)

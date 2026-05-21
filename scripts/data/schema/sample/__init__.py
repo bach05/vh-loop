@@ -1,10 +1,15 @@
+"""Sample package exports.
+
+This package exposes concrete sample types and the abstract base
+``DataSample`` used across the codebase.
+"""
+
 from .base import DataSample, PromptingSchema
-# from .detection import DatasetLevelDetectionSample, AssetLevelDetectionSample, InstanceLevelDetectionSample, ReasonedDetectionSample
+from .single_image import SISimpleDataSample  # AssetLevelDetectionSample, InstanceLevelDetectionSample, ReasonedDetectionSample
 # from .captioning import CaptioningSample
-from .registry import SAMPLE_REGISTRY, parse_sample
+# from .registry import SAMPLE_REGISTRY, parse_sample
 
 __all__ = [
-    "DataSample", "AssetBackedSample", "DatasetSchema",
-    #"DatasetLevelDetectionSample", "AssetLevelDetectionSample", "InstanceLevelDetectionSample", "ReasonedDetectionSample",
-    "CaptioningSample", "SAMPLE_REGISTRY", "parse_sample",
+    "DataSample", "PromptingSchema",
+    "SISimpleDataSample",
 ]

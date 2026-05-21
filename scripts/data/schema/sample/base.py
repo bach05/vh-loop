@@ -1,25 +1,38 @@
 from __future__ import annotations
 
+"""Base sample abstractions for the schema package.
+
+This module defines :class:`DataSample`, the abstract contract that
+concrete sample types must implement (notably :meth:`sample_to_message`).
+"""
+
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Literal, Optional
-from pydantic import BaseModel, Field
+from typing import Any, TYPE_CHECKING
+from pydantic import BaseModel
 
-from scripts.core.constants import SUPPORTED_PROMPTING_SCHEMAS
+# Use a relative import to reach the project's constants module. The
+# number of leading dots goes from the sample package to the scripts
+# package: sample -> schema -> data -> scripts -> core
+from ...core.constants import SUPPORTED_PROMPTING_SCHEMAS
 
-from scripts.data.schema import Asset, ImageAsset
-from scripts.data.schema import DatasetInfo, MessageBuildInfo
+# Import schema types from the package root (relative import).
+if TYPE_CHECKING:
+    from ..dataset_header import DatasetInfo, MessageBuildInfo
 
 PromptingSchema = SUPPORTED_PROMPTING_SCHEMAS
 
 
 class DataSample(BaseModel, ABC):
-    """Abstract sample contract. Subclasses define required fields and message logic."""
+    """Abstract sample contract. Subclasses define required fields and message logic.
 
-    sample_type: str
-    sample_id: str
-    dataset_id: str
-    metadata: dict[str, Any] = Field(default_factory=dict)
+    Concrete subclasses should set ``sample_type`` to a unique literal and
+    implement :meth:`sample_to_message` to produce the prompt/target
+    structures consumed by downstream tooling.
+    """
+
+    sample_type: str  # used to build the subclass specific samples
+    sample_id: str  # id of the sample in the dataset, e.g. img_00001
 
     @abstractmethod
     def sample_to_message(
@@ -27,8 +40,19 @@ class DataSample(BaseModel, ABC):
         dataset_info: DatasetInfo,
         *,
         prompting_schema: PromptingSchema = "conversational",
+        include_target: bool = True,
         dataset_root: str | Path | None = None,
         build_info: MessageBuildInfo | None = None,
     ) -> dict[str, Any]:
+        """Serialize the sample into a prompt/target payload.
+
+        Implementations should return a dictionary with a stable
+        structure (for example keys like ``messages`` and ``images``)
+        that calling code can send to a VLM or save to disk.
+        """
         ...
 
+################### COMMON UTILS ##############à
+
+def make_message(role: str, content: list[dict]) -> dict:
+    return {"role": role, "content": content}

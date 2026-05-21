@@ -1,0 +1,219 @@
+%% data_schema_current_code_v2.mmd
+%% Mermaid schema generated from the current uploaded codebase.
+%% Focus: current implementation, not the broader target architecture.
+
+classDiagram
+direction TB
+
+%% =========================
+%% Dataset header / records
+%% =========================
+
+class DatasetInfoRecord {
+  +Literal record_type = "dataset_info"
+  +str schema_version
+  +DatasetInfo info
+}
+
+class DataRecord {
+  +Literal record_type = "sample"
+  +SampleUnion sample
+}
+
+class DatasetInfo {
+  +str dataset_id
+  +Optional~str~ description
+  +Optional~AnnotationInfo~ annotation_info
+  +Optional~str~ domain
+  +Optional~str~ split
+  +Optional~str~ date_collected
+  +Optional~str~ date_last_update
+  +dict~str,LabelInfo~ label_info
+  +MessageBuildInfo message_build_info
+  +dict~str,Any~ metadata
+  +label_name_to_id(label_name) int|str
+  +label_id_to_name(label_id) str
+}
+
+class LabelInfo {
+  +int|str label_id
+  +str label_name
+  +Optional~str~ description
+  +list~str~ aliases
+  +Optional~str~ parent_label
+  +_validate_label_name() LabelInfo
+}
+
+class AnnotationInfo {
+  +source_type source_type
+  +quality quality
+  +Optional~str~ notes
+}
+
+class MessageBuildInfo {
+  +str prompt_template_version
+  +answer_format answer_format
+  +int normalization_factor
+  +dict~str,Any~ metadata
+}
+
+DatasetInfoRecord *-- DatasetInfo : info
+DatasetInfo *-- LabelInfo : label_info
+DatasetInfo o-- AnnotationInfo : annotation_info
+DatasetInfo *-- MessageBuildInfo : message_build_info
+
+%% =========================
+%% Polymorphic sample parsing
+%% =========================
+
+class SampleUnion {
+  <<discriminated union>>
+  +discriminator sample_type
+  +SISimpleDataSample
+}
+
+DataRecord --> SampleUnion : sample
+SampleUnion --> SISimpleDataSample : currently supports
+
+%% =========================
+%% Data samples
+%% =========================
+
+class DataSample {
+  <<abstract>>
+  +str sample_type
+  +str sample_id
+  +sample_to_message(dataset_info, prompting_schema, include_target, dataset_root, build_info) dict
+}
+
+class SISimpleDataSample {
+  +Literal sample_type = "si_simple_data"
+  +list~ImageAsset~ assets
+  +_check_annotations() SISimpleDataSample
+  +build_dataset_level_description(dataset_info) str
+  +build_prompt(dataset_info) str
+  +sample_to_message(dataset_info, prompting_schema, include_target, dataset_root, build_info) dict
+}
+
+DataSample <|-- SISimpleDataSample
+SISimpleDataSample *-- ImageAsset : assets exactly 1
+SISimpleDataSample ..> DatasetInfo : builds prompt from label_info
+SISimpleDataSample ..> MessageBuildInfo : uses normalization_factor
+SISimpleDataSample ..> InstanceAnnotation : serializes asset.annotations
+SISimpleDataSample ..> PromptingSchema : conversational / prompt-completion
+
+class PromptingSchema {
+  <<alias>>
+  SUPPORTED_PROMPTING_SCHEMAS
+}
+
+%% =========================
+%% Assets
+%% =========================
+
+class Asset {
+  <<abstract>>
+  +str type
+  +str uri
+  +Optional~str~ caption
+  +list~InstanceAnnotation~ annotations
+  +dict~str,Any~ metadata
+  +resolve_path(dataset_root) str
+}
+
+class ImageAsset {
+  +Literal type = "image"
+  +tuple~int,int~ size
+  +Optional~str~ camera_id
+  +width int
+  +height int
+}
+
+class DepthImageAsset {
+  +Literal type = "depth"
+}
+
+Asset <|-- ImageAsset
+ImageAsset <|-- DepthImageAsset
+Asset *-- InstanceAnnotation : annotations
+
+%% =========================
+%% Annotations
+%% =========================
+
+class InstanceAnnotation {
+  +str instance_id
+  +int label_id
+  +str label_name
+  +Optional~BoundingBox~ bbox
+  +Optional~list~Point~~ points
+  +Optional~RLEMask~ mask
+  +Optional~str~ caption
+  +dict~str,str~ attributes
+}
+
+InstanceAnnotation o-- BoundingBox : bbox
+InstanceAnnotation o-- Point : points
+InstanceAnnotation o-- RLEMask : mask
+InstanceAnnotation ..> LabelInfo : label_id / label_name refer to label_info
+
+%% =========================
+%% Geometry
+%% =========================
+
+class Geometry {
+  <<abstract>>
+  +to_text(**kwargs) str
+}
+
+class Point {
+  +int x
+  +int y
+  +Optional~bool~ is_positive
+  +normalize(img_width, img_height, norm_factor) tuple
+  +to_text(img_width, img_height, norm_factor) str
+}
+
+class BoundingBox {
+  +Point tl
+  +Point br
+  +Literal format = "xyxy"
+  +width float
+  +height float
+  +area() float
+  +normalize(img_width, img_height, norm_factor) tuple
+  +to_text(img_width, img_height, norm_factor) str
+  +_valid() BoundingBox
+}
+
+class RLEMask {
+  +list~int~|str counts
+  +tuple~int,int~ size
+  +to_binary_mask()
+  +from_binary_mask(mask) RLEMask
+  +to_text() str
+}
+
+Geometry <|-- Point
+Geometry <|-- BoundingBox
+Geometry <|-- RLEMask
+BoundingBox *-- Point : tl
+BoundingBox *-- Point : br
+
+%% =========================
+%% Current message flow
+%% =========================
+
+SISimpleDataSample --> TrainingRow : sample_to_message()
+
+class TrainingRow {
+  <<dict>>
+  conversational: messages + images
+  prompt-completion: prompt + completion + images
+}
+
+note for SISimpleDataSample "Single-image dataset-level prompt strategy.\nPrompt is built from DatasetInfo.label_info.\nTarget is compact tag bbox list:\n<class_name,x1,y1,x2,y2>;...\nCoordinates are normalized using MessageBuildInfo.normalization_factor."
+
+note for DataRecord "DataRecord stores a discriminated SampleUnion.\nThe active discriminator is sample.sample_type."
+
+note for LabelInfo "label_name is validated as compact token without spaces:\n^[A-Za-z0-9_.:-]+$"

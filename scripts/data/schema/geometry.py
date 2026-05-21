@@ -1,50 +1,73 @@
 from __future__ import annotations
 
+"""Geometry primitives used by the data schema.
+
+This module defines small Pydantic models for common geometric
+primitives: 2-D points, axis-aligned bounding boxes and RLE masks. The
+models provide convenience helpers for normalization and simple
+serialization to textual compact formats used in prompt/target
+construction.
+"""
+
 from abc import ABC, abstractmethod
-from typing import Any, Literal, cast
+from typing import Any, Literal, cast, Optional
 
 from pydantic import BaseModel, model_validator
 import numpy as np
 
-#Abstract class Geometry
-class Geometry(ABC, BaseModel):
-    """Base class for geometric annotations like bounding boxes and masks."""
-    primitive_id: str
+
+class Geometry(BaseModel, ABC):
+    """Abstract geometry base class.
+
+    Subclasses should implement :meth:`to_text` for compact textual
+    serialization used by prompt/target builders.
+    """
 
     @abstractmethod
     def to_text(self, **kwargs) -> str:
-        """Convert to a serializable dict for inclusion in VLMSample annotations."""
+        """Return a compact textual representation of the geometry.
+
+        The exact keyword arguments depend on the subclass (e.g.
+        image width/height and normalization factor) and are documented
+        on the concrete classes.
+        """
         pass
 
 
-class Point(Geometry, BaseModel):
-    """2-D point. The owning geometry defines the pixel image space.
-        This because the original pixel space allow the maximum precision with the most compact representation (int).
-    """
+class Point(Geometry):
+    """2-D integer point in image pixel coordinates.
 
-    primitive_id = "point"
+    ``is_positive`` is an optional flag used by some point list
+    encodings to indicate positive/negative examples.
+    """
 
     x: int
     y: int
-    is_positive: bool = None
+    is_positive: Optional[bool] = None  # used in point lists; optional
 
     def normalize(self, img_width: int, img_height: int, norm_factor: float = 1.0) -> tuple[float, float]:
+        if img_width <= 0 or img_height <= 0:
+            raise ValueError("img_width and img_height must be > 0")
+
         norm_x = self.x / img_width * norm_factor
         norm_y = self.y / img_height * norm_factor
         return norm_x, norm_y
 
-    def to_text(self, img_width: int, img_height: int, norm_factor: float = 1000.0):
+    def to_text(self, img_width: int, img_height: int, norm_factor: float = 1000.0) -> str:
         norm_x, norm_y = self.normalize(img_width, img_height, norm_factor)
         return f"{int(round(norm_x))},{int(round(norm_y))}"
 
 
-class BoundingBox(Geometry, BaseModel):
-    """Axis-aligned bbox with exclusive br corner: [tl, br)."""
+class BoundingBox(Geometry):
+    """Axis-aligned bbox with exclusive bottom-right corner: [tl, br).
+
+    ``tl`` and ``br`` are instances of :class:`Point` expressed in image
+    pixel coordinates.
+    """
 
     tl: Point
     br: Point
     format: Literal["xyxy"] = "xyxy"
-    primitive_id = "bbox"
 
     @model_validator(mode="after")
     def _valid(self) -> "BoundingBox":
@@ -68,16 +91,20 @@ class BoundingBox(Geometry, BaseModel):
         br_norm = self.br.normalize(img_width, img_height, norm_factor)
         return tl_norm, br_norm
 
-    def to_text(self, img_width: int, img_height: int):
-        tl_norm, br_norm = self.normalize(img_width, img_height)
+    def to_text(self, img_width: int, img_height: int, norm_factor: float = 1000.0) -> str:
+        tl_norm, br_norm = self.normalize(img_width, img_height, norm_factor)
         return f"{int(round(tl_norm[0]))},{int(round(tl_norm[1]))},{int(round(br_norm[0]))},{int(round(br_norm[1]))}"
 
-class RLEMask(Geometry, BaseModel):
-    """Binary mask in COCO RLE format."""
+
+class RLEMask(Geometry):
+    """Binary mask in COCO RLE format.
+
+    ``counts`` may be either a string (the compact RLE) or a list of
+    integers. ``size`` is (height, width) as returned by COCO tools.
+    """
 
     counts: list[int] | str
     size: tuple[int, int]  # (height, width)
-    primitive_id = "rle_mask"
 
     def to_binary_mask(self):  # -> np.ndarray[bool]
         from pycocotools import mask as mask_utils  # type: ignore
@@ -99,6 +126,6 @@ class RLEMask(Geometry, BaseModel):
 
     def to_text(self) -> str:
         if isinstance(self.counts, str):
-            return f"{self.counts}"
+            return self.counts
         else:
-            return ",".join(self.counts)
+            return ",".join(map(str, self.counts))
