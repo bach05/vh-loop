@@ -1,4 +1,4 @@
-gt_jsonl: ${oc.env:DATA_PATH, /data}/panizzolo/paniz_test_03_30_SINGLE.vh_loop.jsonl
+gt_jsonl: ${oc.env:DATA_PATH, /data}/panizzolo/paniz_test_03_30_SINGLE.canonical_v2.jsonl
 
 # Option A: explicit list
 predictions:
@@ -8,10 +8,12 @@ predictions:
   #   path: ${oc.env:MODEL_PATH, /models}/vhloop/testing/gemma4_panizzolo2_lora/predictions.jsonl
   # - name: gemma
   #   path: ${oc.env:MODEL_PATH, /models}/vhloop/testing/gemma4_panizzolo_lora_ORI_MODEL/predictions.jsonl
-  - name: qwen_lora
-    path: ${oc.env:MODEL_PATH, /models}/vhloop/testing/qwen3_5_panizzolo_lora/predictions.jsonl
-  # - name: qwen
-  #   path: ${oc.env:MODEL_PATH, /models}/vhloop/testing/qwen3_5_panizzolo_lora_ORI_MODEL/predictions.jsonl
+  - name: qwen_lora_V2
+    path: ${oc.env:MODEL_PATH, /models}/vhloop/testing/qwen3_5_panizzolo_lora_schemav2/predictions.jsonl
+#  - name: qwen_lora
+#    path: ${oc.env:MODEL_PATH, /models}/vhloop/testing/qwen3_5_panizzolo_lora/predictions.jsonl
+#  - name: qwen
+#    path: ${oc.env:MODEL_PATH, /models}/vhloop/testing/qwen3_5_panizzolo_lora_ORI_MODEL/predictions.jsonl
 
 
 # Option B: folder search
