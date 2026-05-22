@@ -1,7 +1,7 @@
 defaults:
   - /model: qwen3_5 # qwen3_5, gemma4
-  - /experiment: test_exp
-  - /dataset: panizzolo2
+  - /experiment: schemav2
+  - /dataset: panizzolo
   - /transform: paniz_s1000
   - /peft: lora
   - /trainer: qwen_sft_trainer # gemma4_sft_trainer, qwen_sft_trainer
@@ -19,7 +19,7 @@ max_debug_samples: 32 #number of iterations to run in debug mode, only effective
 #task: labelling #ident
 use_adapter: true #whether to load the fine-tuned adapter
 
-exp_name: "${hydra:runtime.choices.model}_${hydra:runtime.choices.dataset}${strip_null:${hydra:runtime.choices.peft}}${strip_null:${hydra:runtime.choices.quantization}}"
+exp_name: "${hydra:runtime.choices.model}_${hydra:runtime.choices.dataset}${strip_null:${hydra:runtime.choices.peft}}${strip_null:${hydra:runtime.choices.quantization}}_${hydra:runtime.choices.experiment}"
 
 hydra:
   run:

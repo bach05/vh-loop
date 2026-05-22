@@ -11,6 +11,7 @@ from .assets import Asset, ImageAsset, DepthImageAsset
 from .dataset_header import DatasetInfo, SCHEMA_VERSION, MessageBuildInfo, LabelInfo, AnnotationInfo
 from .records import DatasetInfoRecord, DataRecord
 from .annotations import InstanceAnnotation
+from .sample.base import DataSample
 from .sample.single_image import SISimpleDataSample, PromptingSchema
 
 __all__ = [
@@ -25,7 +26,7 @@ __all__ = [
     # annotations
     "InstanceAnnotation",
     # samples
-    "SISimpleDataSample", "PromptingSchema",
+    "DataSample", "SISimpleDataSample", "PromptingSchema",
 ]
 
 
