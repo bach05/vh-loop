@@ -436,5 +436,9 @@ singularity build --fakeroot containers/singularity/vhl.sif containers/singulari
 
 Submit a ``train_sample`` job to the cluster using the container:
 ```bash
-sbatch hpc/slurm/train_sample.slurm
+sbatch hpc/slurm/train_sample.slurm \
+  configs/train_entrypoint.yaml \
+  qwen_sft_trainer_CLUSTER \
+  quen_3_5_CLUSTER \
+  qwen_test
 ```

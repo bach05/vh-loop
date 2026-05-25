@@ -1,0 +1,11 @@
+adapter: 'qwen3_5'
+params:
+  model_name_or_path: 'Qwen/Qwen3.5-2B'
+  model_params:
+    dtype: 'bfloat16'
+    device_map: 'auto'
+    trust_remote_code: true
+    attn_implementation: 'flash_attention_2'
+  processor_params:
+    max_pixels: 972000 #1920x1080=2073600, 1600x1080=1728000, 1280x720=921600, 960x540=518400, higher values preserve fine details but consumes more memory
+

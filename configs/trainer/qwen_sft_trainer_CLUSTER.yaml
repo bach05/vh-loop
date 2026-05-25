@@ -1,0 +1,116 @@
+# =============================================================================
+# Batching
+# =============================================================================
+
+per_device_train_batch_size: 2        # Number of training samples per GPU/device.
+gradient_accumulation_steps: 2        # Accumulate gradients over N steps before optimizer update.
+per_device_eval_batch_size: 2         # Number of evaluation samples per GPU/device.
+
+# Effective train batch size:
+# per_device_train_batch_size * gradient_accumulation_steps * num_devices
+
+# =============================================================================
+# Training duration
+# =============================================================================
+
+num_train_epochs: 5                   # Number of full passes over the training dataset.
+max_steps: -1                        # If > 0, overrides num_train_epochs. Use -1 to disable.
+
+# =============================================================================
+# Optimizer and learning rate schedule
+# =============================================================================
+
+learning_rate: 2e-4                   # Initial learning rate. Decimal form avoids YAML parsing issues.
+weight_decay: 0.01                    # L2 weight decay applied by the optimizer.
+
+optim: "adamw_torch_fused"            # Optimizer. Fused AdamW can be faster on compatible CUDA/PyTorch setups.
+
+max_grad_norm: 0.5                    # Gradient clipping threshold. Set to 0 to disable clipping.
+
+lr_scheduler_type: "cosine"         # Scheduler type: linear, cosine, constant, constant_with_warmup, etc.
+warmup_steps: 25                  # Optional warmup steps, useful with warmup-based schedules.
+
+# =============================================================================
+# Precision and memory optimization
+# =============================================================================
+
+bf16: true                            # Use bfloat16 mixed precision. Recommended on Ampere+ GPUs if supported.
+fp16: false                           # Use float16 mixed precision. Keep false when bf16 is enabled.
+
+gradient_checkpointing: true          # Saves memory by recomputing activations during backward pass.
+
+# Optional, often useful with PEFT/LoRA + gradient checkpointing:
+# gradient_checkpointing_kwargs:
+#   use_reentrant: false
+
+# =============================================================================
+# Dataset preprocessing
+# =============================================================================
+
+max_length: null                      # For VLMs, keep null unless truncation is known to preserve image tokens.
+
+dataset_text_field: ""                # Unused when skip_prepare_dataset is true or when using a custom collator.
+
+dataset_kwargs:
+  skip_prepare_dataset: true          # Skip TRL dataset formatting/tokenization. Use when your collator handles processing.
+
+remove_unused_columns: false          # Important for VLM/custom collators; prevents dropping image/message fields.
+
+
+# =============================================================================
+# Sequence packing
+# =============================================================================
+
+packing: false                        # Groups multiple samples into fixed-length sequences. Usually disabled for VLMs.
+
+# =============================================================================
+# Loss configuration
+# =============================================================================
+
+loss_type: "nll"                      # Standard negative log-likelihood loss.
+
+assistant_only_loss: false            # If true, computes loss only on assistant messages. Keep false for VLM/custom masking.
+
+completion_only_loss: false           # For prompt-completion datasets only. For messages-based VLM data, prefer false.
+
+use_liger_kernel: false               # Enables Liger kernels if supported. Keep false for compatibility.
+
+
+# =============================================================================
+# Logging
+# =============================================================================
+
+logging_strategy: "steps"             # Logging frequency mode: "no", "steps", or "epoch".
+
+logging_steps: 0.10                     # Log training progress every N optimizer steps. If float < 1, interpreted as fraction of total training steps.
+
+logging_first_step: true              # Log also at the first optimization step.
+
+disable_tqdm: true                    # Disable tqdm progress bars. Useful for cleaner logs in scripts/SLURM jobs.
+
+report_to: "none"                     # Disable external reporting integrations such as WandB/TensorBoard.
+
+# =============================================================================
+# Evaluation
+# =============================================================================
+
+eval_strategy: "epoch"                # Evaluation strategy: "no", "steps", or "epoch".
+
+eval_steps: 25                     # Only used when eval_strategy: "steps".
+
+metric_for_best_model: "eval_loss"    # Metric used to select the best checkpoint.
+
+greater_is_better: false              # false because lower eval_loss is better.
+
+
+# =============================================================================
+# Checkpointing
+# =============================================================================
+
+save_strategy: "epoch"                # Save checkpoint at the end of each epoch.
+
+save_steps: 25                     # Only used when save_strategy: "steps".
+
+save_total_limit: 1                   # Maximum number of checkpoints to keep.
+
+load_best_model_at_end: true          # Reload the best checkpoint at the end. Requires eval/save strategies to match.

@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH -o outputs/%x_%j.out
-#SBATCH -e errors/%x_%j.err
+#SBATCH -o logs/outputs/%x_%j.out
+#SBATCH -e logs/errors/%x_%j.err
 #SBATCH -t 24:00:00
 #SBATCH -n 4
 #SBATCH -c 2
@@ -13,6 +13,9 @@
 set -euo pipefail
 
 ENTRYPOINT_YAML="${1:?Missing entrypoint yaml}"
+TRAINER_CONFIG_TRAINER_CONFIG_YAMLYAML="${2:?Missing trainer config yaml}"
+MODEL_CONFIG_YAML="${3:?Missing model config yaml}"
+RUN_ID="${4:?Missing run_id}"
 
 WORKDIR_HOST="/nfsd/iaslab4/Users/bacchin"
 REPO_HOST="${WORKDIR_HOST}/vhl_ws/vh-loop"
@@ -36,11 +39,8 @@ export APPTAINERENV_XDG_CACHE_HOME=/models/xdg
 echo "=================================================="
 echo "RUN_ID        : ${RUN_ID}"
 echo "ENTRYPOINT    : ${ENTRYPOINT_YAML}"
-echo "MODEL         : ${MODEL_NAME}"
-echo "DATASET       : ${DATASET}"
-echo "TRANSFORM     : ${TRANSFORM}"
-echo "REPO_HOST     : ${REPO_HOST}"
-echo "SIF_HOST      : ${SIF_HOST}"
+echo "MODEL         : ${MODEL_CONFIG_YAML}"
+echo "TRAINER       : ${TRAINER_CONFIG_YAML}"
 echo "HOST_LOG      : ${HOST_LOG}"
 echo "=================================================="
 
@@ -56,4 +56,6 @@ singularity exec \
   pixi run --manifest-path /mnt/vh-loop \
   python /mnt/vh-loop/tests/train_sample.py \
     --config-name "${ENTRYPOINT_YAML}" \
+    "trainer=${TRAINER_CONFIG_YAML}" \
+    "model=${MODEL_CONFIG_YAML}" \
   2>&1 | tee "${HOST_LOG}"
