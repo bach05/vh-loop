@@ -41,9 +41,9 @@ def main(cfg: DictConfig) -> None:
     # NB: HERE WE ARE ASSUMING ALL THE DATASET TO FOLLOW THE SAME SCHEMA, BUT NOBODY IS CHECKING.
     # In general some fields may be different, while some fields must agree.
 
-    train_dataset = build_hf_datasets(cfg.dataset, transform_cfg=cfg.transform, split='training')
+    train_dataset = build_hf_datasets(cfg.dataset, transform_cfg=cfg.get('transform'), split='training')
     try:
-        valid_dataset = build_hf_datasets(cfg.dataset, transform_cfg=cfg.transform, split='validation')
+        valid_dataset = build_hf_datasets(cfg.dataset, transform_cfg=cfg.get('transform'), split='validation')
     except DatasetBuildError as e:
         logging.warning(f"Validation dataset not found or failed to build: {e} Splitting train dataset..")
         train_dataset, valid_dataset = train_val_split(train_dataset)

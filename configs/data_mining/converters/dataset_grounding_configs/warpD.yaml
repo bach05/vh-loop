@@ -1,0 +1,73 @@
+dataset: WarpDataset
+
+data_dicts:
+  warpD_train:
+    folder_path: "train/images"
+    labels: "/media/iaslab/data_bacchin/warp/Warp-D/train/labels/"
+  warpD_test:
+      folder_path: "test/images"
+      labels: "/media/iaslab/data_bacchin/warp/Warp-D/test/labels/"
+
+#labels 0-27
+CLASSES:
+  plastic-bottle-blue: 
+  - "Blue plastic bottles" #0
+  plastic-bottle-green: 
+  - "Green plastic bottles" #1
+  plastic-bottle-dark: 
+  - "Dark plastic bottles" #2
+  plastic-bottle-milk: 
+  - "Plastic milk bottles" #3
+  plastic-bottle-transp: 
+  - "Transparent plastic bottles" #4
+  plastic-bottle-multicolor: 
+  - "Plastic bottles with multicolor designs" #5
+  plastic-bottle-yogurt: 
+  - "Small plastic yogurt drink bottles" #26
+  plastic-bottle-oil: 
+  - "Plastic bottles used for cooking oil" #7
+  cans: 
+  - "Aluminum or tin can" #8
+  juice-tetrapak: 
+  - "Tetra Pak cartons for juices" #9
+  milk-tetrapak: 
+  - "Tetra Pak cartons for milk or dairy drinks" #10
+  plastic-detergent-color: 
+  - "Colored plastic detergent bottles or flacons" #11
+  plastic-detergent-transparent: 
+  - "Transparent plastic detergent bottles" #12
+  detergent-box: 
+  - "Cardboard detergent boxes for powdered detergents" #13
+  plastic-canister: 
+  - "Large rigid plastic canisters" #14
+  plastic-bottle-blue-full: 
+  - "Blue plastic bottles filled with some liquid inside" #15
+  plastic-bottle-transp-full: 
+  - "Transparent plastic bottles filled with some liquid inside" #16
+  plastic-bottle-dark-full: 
+  - "Dark-colored plastic bottles filled with some liquid inside" #17
+  plastic-bottle-green-full: 
+  - "Green plastic bottles filled with some liquid inside" #18
+  plastic-bottle-multicolorv-full: 
+  - "Multicolored plastic bottles filled with some liquid inside" #19
+  plastic-bottle-milk-full: 
+  - "Plastic bottle for milk filled with some liquid inside" #20
+  plastic-bottle-oil-full: 
+  - "plastic oil bottles (PET or HDPE material) filled with some liquid inside" #21
+  plastic-detergent-white: 
+  - "White plastic detergent containers or flacons" #22
+  plastic-bottle-blue5l: 
+  - "Large blue plastic bottles" #23
+  plastic-bottle-blue5l-full: 
+  - "Large blue bottles filled with some liquid inside" #24
+  glass-transp: 
+  - "Transparent glass bottles" #25
+  glass-dark: 
+  - "Dark glass bottles" #26
+  glass-green: 
+  - "Green glass bottles" #27
+
+VISUALIZE: true
+
+GLOBAL_ROOT: "/media/iaslab/data_bacchin/warp/Warp-D"
+#GLOBAL_ROOT: "/mnt/Autolabelling_env/datasets/Warp-D"

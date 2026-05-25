@@ -28,7 +28,7 @@ optim: "adamw_torch_fused"            # Optimizer. Fused AdamW can be faster on 
 max_grad_norm: 0.5                    # Gradient clipping threshold. Set to 0 to disable clipping.
 
 lr_scheduler_type: "cosine"         # Scheduler type: linear, cosine, constant, constant_with_warmup, etc.
-warmup_steps: 25                  # Optional warmup steps, useful with warmup-based schedules.
+warmup_steps: 100                  # Optional warmup steps, useful with warmup-based schedules.
 
 # =============================================================================
 # Precision and memory optimization

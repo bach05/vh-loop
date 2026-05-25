@@ -1,0 +1,36 @@
+dataset: CocoWasteDataset
+
+data_dicts:
+  paniz_train_04_02_single:
+    folder_path: ""
+    labels: "/media/iaslab/data_bacchin/panizzolo/paniz_train_04_02_SINGLE.json"
+
+CLASSES:
+    "rotor":
+      - "Metal rotor pieces, often made of steel or iron, which are key components in electric motors."
+    "stator":
+      - "Metal stator pieces, which are the stationary part of electric motors, often made of steel or iron."
+    "shaft":
+      - "Metal shaft pieces, which are cylindrical components that transmit torque in electric motors, often made of steel."
+    "heavy_scrap":
+      - "Heavy metal scrap pieces that do not fit into the rotor, stator, or shaft categories."
+    "copper":
+        - "Isolated copper windings scraps, often from electrical components or wiring."
+
+#    "textile":
+#      - "Bags, backpacks, clothes, shoes, fabric, nets"
+#    "paper":
+#      - "Cardboard, paper, newspapers, magazines"
+#    "metal":
+#      - "aluminium foil, Iron/steel pieces, Metal grids, tools"
+#      - "cans, tins, metal food containers"
+#    "wood":
+#      - "Pieces of wood, furniture, doors"
+#    "weee":
+#      - "Electronic toys, devices, home appliances, powered devices"
+#      - "Cables, wires, batteries"
+
+VISUALIZE: true
+
+GLOBAL_ROOT: "/media/iaslab/data_bacchin/panizzolo"
+#GLOBAL_ROOT: "/mnt/Autolabelling_env/datasets/coco_cosmari_s3000"

@@ -2,10 +2,10 @@
 #SBATCH -o logs/outputs/%x_%j.out
 #SBATCH -e logs/errors/%x_%j.err
 #SBATCH -t 24:00:00
-#SBATCH -n 4
+#SBATCH -n 2
 #SBATCH -c 2
 #SBATCH -p allgroups
-#SBATCH --gres=gpu:a40:4
+#SBATCH --gres=gpu:a40:2
 #SBATCH --mem=8G
 #SBATCH --mail-user=bacchinalb@dei.unipd.it
 #SBATCH --mail-type=ALL

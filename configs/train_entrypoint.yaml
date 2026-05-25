@@ -1,11 +1,11 @@
 defaults:
   - /model: qwen3_5 # qwen3_5, gemma4
   - /experiment: test_exp
-  - /dataset: panizzolo
-  - /transform: paniz_s1000
+  - /dataset: generic_waste
+  - /transform: null
   - /peft: lora
   - /trainer: qwen_sft_trainer # gemma4_sft_trainer, qwen_sft_trainer
-  - /quantization: null # 4bit, 8bit, null
+  - /quantization: 8bit # 4bit, 8bit, null
   - _self_
 
 #run_id: gemma_ba_test #additional info to distinguish different runs, e.g., model name, dataset name, etc.

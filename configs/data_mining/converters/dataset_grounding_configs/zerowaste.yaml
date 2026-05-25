@@ -1,0 +1,38 @@
+dataset: CocoWasteDataset
+
+data_dicts:
+  zerowaste_train:
+    folder_path: "train/data"
+    labels: "/media/iaslab/data_bacchin/zerowaste/zerowaste_datasets/zerowaste-v1/train/labels.json"
+  zerowaste_val:
+    folder_path: "val/data"
+    labels: "/media/iaslab/data_bacchin/zerowaste/zerowaste_datasets/zerowaste-v1/val/labels.json"
+  zerowaste_test:
+    folder_path: "test/rgb"
+    labels: "/media/iaslab/data_bacchin/zerowaste/zerowaste_datasets/zerowaste-v1/test/labels.json"
+
+CLASSES:
+    rigid_plastic:
+      - "Plastic liquid containers (PET/PE/PP bottles and flacons, 0.33–5L)"
+      - "Durable plastic goods (appliances, furniture, toys, auto parts, household items)"
+      - "Plastic cutlery, irrigation pipes, construction materials. plastic crates, etc..."
+    cardboard:
+      - "cardboard, carton boxes, corrugated cardboard, paperboard, brown cardboard"
+      - "brown packaging, cardboard packaging, cereal boxes, shoe boxes, etc... "
+    rigid_plastic:
+      - "Durable plastic goods (appliances, furniture, toys, auto parts, household items)"
+      - "Plastic cutlery, irrigation pipes, construction materials"
+    metal:
+      - "Bags, backpacks, clothes, shoes, fabric, nets"
+    paper:
+      - "Cardboard, paper, newspapers, magazines"
+    metal:
+      - "Aluminium foil, Iron/steel pieces, Metal grids, tools"
+      - "cans, tins, metal food containers"
+    soft_plastic:
+      - "plastic bags, wrappers, films, pouches, plastic packaging films"
+
+VISUALIZE: true
+
+GLOBAL_ROOT: "/media/iaslab/data_bacchin/zerowaste/zerowaste_datasets/zerowaste-v1"
+#GLOBAL_ROOT: "/mnt/Autolabelling_env/datasets/zerowaste-v1"

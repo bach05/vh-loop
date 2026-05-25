@@ -1,0 +1,31 @@
+configs:
+  - dataset_grounding_configs/cosmari.yaml
+  - dataset_grounding_configs/warpD.yaml
+  - dataset_grounding_configs/zerowaste.yaml
+  - dataset_grounding_configs/panizzolo.yaml
+
+# All asset.uri values will be written relative to this folder when uri_mode=relative.
+# At training/loading time, pass dataset_root=/media/iaslab/data_bacchin.
+common_data_folder: /media/iaslab/data_bacchin
+out_dir: /media/iaslab/data_bacchin/canonical_datasets
+
+dataset_id: waste_merged_v1
+description: "Merged canonical dataset generated from heterogeneous dataset grounders."
+domain: waste-sorting
+split: train
+
+annotation_source: imported
+annotation_quality: good
+
+sample_type: si_simple_data
+prompt_template_version: single_image_dataset_level_prompt_generation
+answer_format: tag_bbox_list
+normalization_factor: 1000
+
+uri_mode: relative # Options: relative, absolute
+
+drop_empty: false
+skip_invalid_bboxes: true
+generate_center_points: true
+include_instance_metadata: false
+sanitize_label_names: true

@@ -1,0 +1,47 @@
+dataset: CocoWasteDataset
+
+data_dicts:
+  cosmari_train_s3000:
+    folder_path: "images/default"
+    labels: "/media/iaslab/data_bacchin/cosmari/cosmari_train_s3000/annotations/instances_default.json"
+
+CLASSES:
+    "plastic_packaging":
+      - "Plastic liquid containers (PET/PE/PP bottles and flacons, 0.33–5L)"
+      - "Food packaging: bottles <0.33L or >5L, trays, egg cartons, sachets, nets, ice cream tubs, yogurt/cream/dessert cups, lids, disposable plates and cups"
+      - "Non-food packaging: detergent/cosmetic flacons, blister packs, EPS packaging for small appliances, sacks/bags, clothing packaging, reusable shoppers, non-permanent flowerpots, hangers"
+      - "Large plastic films (>A2 size), expanded polystyrene packaging (except food trays and small appliances <A2)"
+      - "Straps, big-bags, seedling trays, rigid packaging >20L"
+    "plastic_fruit_crate":
+      - "Bottle crates"
+      - "Fruit/vegetable crates"
+    "rigid_plastic_no_packaging_nor_crates":
+      - "Durable plastic goods (appliances, furniture, toys, auto parts, household items)"
+      - "Plastic cutlery, irrigation pipes, construction materials"
+    "foreign_objects":
+      - "Nothing that can be classified in the other categories, such as:"
+      - "textiles like bags, backpacks, clothes, shoes, fabric, nets"
+      - "Cardboard, paper, newspapers, magazines and other paper waste"
+      - "metal like aluminium foil, iron/steel pieces, Metal grids, tools"
+      - "cans, tins, metal food containers"
+      - "wood like pieces of wood, furniture, doors"
+      - "weee like electronic toys, devices, home appliances, powered devices"
+      - "Cables, wires, batteries"
+
+#    "textile":
+#      - "Bags, backpacks, clothes, shoes, fabric, nets"
+#    "paper":
+#      - "Cardboard, paper, newspapers, magazines"
+#    "metal":
+#      - "aluminium foil, Iron/steel pieces, Metal grids, tools"
+#      - "cans, tins, metal food containers"
+#    "wood":
+#      - "Pieces of wood, furniture, doors"
+#    "weee":
+#      - "Electronic toys, devices, home appliances, powered devices"
+#      - "Cables, wires, batteries"
+
+VISUALIZE: true
+
+GLOBAL_ROOT: "/media/iaslab/data_bacchin/cosmari/cosmari_train_s3000"
+#GLOBAL_ROOT: "/mnt/Autolabelling_env/datasets/coco_cosmari_s3000"

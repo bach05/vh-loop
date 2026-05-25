@@ -425,6 +425,26 @@ pixi run python tests/compare_sample.py
 
 If your data manifests or output locations differ from defaults, update the relevant files in `configs/` or apply Hydra CLI overrides as shown above.
 
+# Data Mining 
+
+## Convert from another dataset format
+To convert from another dataset format (e.g. COCO) to the canonical JSONL, we can use `scripts/data_mining/converters/convert_datasets_to_canonical.py` and its config file `configs/data_mining/converters/convert_dataset_to_canonical.yaml`.
+
+```bash 
+pixi run python scripts/data_mining/converters/convert_datasets_to_canonical.py \
+  --config configs/data_mining/converters/convert_dataset_to_canonical.yaml \
+```
+The `convert_dataset_to_canonical.yaml` contains the global configurations and the pointers to the dataset-specific configurations. 
+It is possible to convert multiple datasets in one run by adding more dataset-specific configs to the `configs` list.
+
+Currently the supported formats are: 
+- COCO-like (e.g. cosmari or panizzolo, labelled in CVAT)
+- Pascal-like (e.g. ZeroWaste)
+- Yolo-like (e.g. WarP)
+More datasets formats can be added by implementing new converter classes in `scripts/data_mining/converters/detection_dataset_grounders.py` and adding the corresponding dataset-specific config files in `configs/data_mining/converters/dataset_grounding_configs`.
+
+```bash
+
 # Containers
 
 ## Singularity/Apptainer
