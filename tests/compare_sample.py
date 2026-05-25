@@ -29,9 +29,9 @@ from omegaconf import DictConfig
 from PIL import Image
 from tqdm import tqdm
 
-from data.canonical_schema import DatasetInfo, DatasetInfoRecord, DataRecord, InstanceAnnotation
-from data.canonical_schema.assets import ImageAsset
-from data.canonical_schema.sample.base import DataSample
+from scripts.data.canonical_schema import DatasetInfo, DatasetInfoRecord, DataRecord, InstanceAnnotation
+from scripts.data.canonical_schema.assets import ImageAsset
+from scripts.data.canonical_schema.sample.base import DataSample
 
 
 # -------------------------------------------------------------------------

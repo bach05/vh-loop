@@ -19,8 +19,9 @@ max_debug_samples: 32 #number of iterations to run in debug mode, only effective
 #task: labelling #ident
 use_adapter: true #whether to load the fine-tuned adapter
 
-exp_name: "${hydra:runtime.choices.model}_${hydra:runtime.choices.dataset}${strip_null:${hydra:runtime.choices.peft}}${strip_null:${hydra:runtime.choices.quantization}}_${hydra:runtime.choices.experiment}"
+exp: v3
 
+exp_name: "${hydra:runtime.choices.model}_${hydra:runtime.choices.dataset}_${hydra:runtime.choices.peft}${strip_null:${hydra:runtime.choices.quantization}}_${exp}"
 hydra:
   run:
     dir: ${oc.env:MODEL_PATH, /models}/vhloop/testing/${exp_name}

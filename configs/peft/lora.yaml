@@ -5,5 +5,5 @@ params:
   lora_alpha: 16
   lora_dropout: 0.1
   bias: "none" #can be "none", "all", or "lora_only"
-  modules_to_save: ["lm_head", "embed_tokens"]
-  ensure_weight_tying: True
+  modules_to_save: [] #["lm_head", "embed_tokens"]
+  ensure_weight_tying: false

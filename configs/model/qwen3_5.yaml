@@ -7,5 +7,5 @@ params:
     trust_remote_code: true
     attn_implementation: 'flash_attention_2'
   processor_params:
-    max_pixels: 802816 #1024x28x28
+    max_pixels: 972000 #1920x1080=2073600, 1600x1080=1728000, 1280x720=921600, 960x540=518400, higher values preserve fine details but consumes more memory
 

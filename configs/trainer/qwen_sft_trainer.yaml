@@ -9,14 +9,12 @@ per_device_eval_batch_size: 2         # Number of evaluation samples per GPU/dev
 # Effective train batch size:
 # per_device_train_batch_size * gradient_accumulation_steps * num_devices
 
-
 # =============================================================================
 # Training duration
 # =============================================================================
 
-num_train_epochs: 3                   # Number of full passes over the training dataset.
-max_steps: -1                         # If > 0, overrides num_train_epochs. Use -1 to disable.
-
+num_train_epochs: 5                   # Number of full passes over the training dataset.
+max_steps: -1                        # If > 0, overrides num_train_epochs. Use -1 to disable.
 
 # =============================================================================
 # Optimizer and learning rate schedule
@@ -27,11 +25,10 @@ weight_decay: 0.01                    # L2 weight decay applied by the optimizer
 
 optim: "adamw_torch_fused"            # Optimizer. Fused AdamW can be faster on compatible CUDA/PyTorch setups.
 
-max_grad_norm: 0.3                    # Gradient clipping threshold. Set to 0 to disable clipping.
+max_grad_norm: 0.5                    # Gradient clipping threshold. Set to 0 to disable clipping.
 
-lr_scheduler_type: "constant"         # Scheduler type: linear, cosine, constant, constant_with_warmup, etc.
-# warmup_ratio: 0.03                  # Optional warmup ratio, useful with warmup-based schedules.
-
+lr_scheduler_type: "cosine"         # Scheduler type: linear, cosine, constant, constant_with_warmup, etc.
+warmup_steps: 25                  # Optional warmup steps, useful with warmup-based schedules.
 
 # =============================================================================
 # Precision and memory optimization
@@ -45,7 +42,6 @@ gradient_checkpointing: true          # Saves memory by recomputing activations 
 # Optional, often useful with PEFT/LoRA + gradient checkpointing:
 # gradient_checkpointing_kwargs:
 #   use_reentrant: false
-
 
 # =============================================================================
 # Dataset preprocessing
@@ -66,7 +62,6 @@ remove_unused_columns: false          # Important for VLM/custom collators; prev
 # =============================================================================
 
 packing: false                        # Groups multiple samples into fixed-length sequences. Usually disabled for VLMs.
-
 
 # =============================================================================
 # Loss configuration
@@ -95,14 +90,13 @@ disable_tqdm: true                    # Disable tqdm progress bars. Useful for c
 
 report_to: "none"                     # Disable external reporting integrations such as WandB/TensorBoard.
 
-
 # =============================================================================
 # Evaluation
 # =============================================================================
 
 eval_strategy: "epoch"                # Evaluation strategy: "no", "steps", or "epoch".
 
-# eval_steps: 100                     # Only used when eval_strategy: "steps".
+eval_steps: 25                     # Only used when eval_strategy: "steps".
 
 metric_for_best_model: "eval_loss"    # Metric used to select the best checkpoint.
 
@@ -115,7 +109,7 @@ greater_is_better: false              # false because lower eval_loss is better.
 
 save_strategy: "epoch"                # Save checkpoint at the end of each epoch.
 
-# save_steps: 100                     # Only used when save_strategy: "steps".
+save_steps: 25                     # Only used when save_strategy: "steps".
 
 save_total_limit: 1                   # Maximum number of checkpoints to keep.
 

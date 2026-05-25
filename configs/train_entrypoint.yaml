@@ -17,8 +17,9 @@ debug: true #when set to true, the code will run in debug mode, which may includ
 #save_every: 100 #save the intermediate results every N iterations, set to 0 to disable saving
 #
 #task: labelling #ident
+exp: v3
 
-exp_name: "${hydra:runtime.choices.model}_${hydra:runtime.choices.dataset}_${hydra:runtime.choices.peft}${strip_null:${hydra:runtime.choices.quantization}}"
+exp_name: "${hydra:runtime.choices.model}_${hydra:runtime.choices.dataset}_${hydra:runtime.choices.peft}${strip_null:${hydra:runtime.choices.quantization}}_${exp}"
 
 hydra:
   run:

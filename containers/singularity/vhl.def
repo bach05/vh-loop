@@ -1,0 +1,130 @@
+Bootstrap: docker
+From: nvidia/cuda:12.8.0-cudnn-devel-ubuntu24.04
+
+%labels
+    Author Bacchin
+    Project vh-loop
+    Description vh-loop runtime with prebuilt Pixi environment for Slurm/Apptainer
+
+%help
+    Assumptions:
+      - The host repo is bind-mounted so it appears inside the container at /mnt/vh-loop
+      - Example bind:
+          --bind /nfsd/iaslab4/Users/bacchin:/mnt
+      - Then the host path /nfsd/iaslab4/Users/bacchin/vh-loop becomes /mnt/vh-loop
+
+    Typical usage:
+      singularity exec --nv \
+        --bind /nfsd/iaslab4/Users/bacchin:/mnt \
+        containers/vhl.sif \
+        pixi run --manifest-path /mnt/vh-loop python /mnt/vh-loop/scripts/your_script.py
+
+    Alternative:
+      singularity run --nv \
+        --bind /nfsd/iaslab4/Users/bacchin:/mnt \
+        containers/vhl.sif \
+        python /mnt/vh-loop/scripts/your_script.py
+
+%files
+    ./pixi.toml /mnt/vh-loop/pixi.toml
+    ./pixi.lock /mnt/vh-loop/pixi.lock
+
+%environment
+    export LANG=C.UTF-8
+    export LC_ALL=C.UTF-8
+    export DEBIAN_FRONTEND=noninteractive
+
+    # Fixed project path inside container
+    export DLDOJO_ROOT=/mnt/vh-loop
+    export PIXI_PROJECT_ROOT=/mnt/vh-loop
+    export PYTHONPATH=/mnt/vh-loop:${PYTHONPATH}
+
+    # Keep runtime reproducible: do not let pixi update the env inside the SIF
+    export PIXI_FROZEN=true
+
+    # Common runtime settings
+    export TOKENIZERS_PARALLELISM=false
+    export MPLCONFIGDIR=/tmp/matplotlib
+
+    # These can be overridden from Slurm with APPTAINERENV_* / SINGULARITYENV_*
+    if [ -z "${HF_HOME:-}" ]; then
+        export HF_HOME=/mnt/cache/huggingface
+    fi
+    export TRANSFORMERS_CACHE="${HF_HOME}"
+
+%post
+    set -eux
+    export DEBIAN_FRONTEND=noninteractive
+
+    apt-get update
+    apt-get install -y --no-install-recommends \
+        bash \
+        ca-certificates \
+        curl \
+        wget \
+        git \
+        git-lfs \
+        build-essential \
+        pkg-config \
+        ninja-build \
+        ffmpeg \
+        libgl1 \
+        libglib2.0-0 \
+        libgomp1 \
+        libsm6 \
+        libxext6 \
+        libxrender1 \
+        && rm -rf /var/lib/apt/lists/*
+
+    git lfs install
+
+    # Create required paths
+    mkdir -p /mnt/vh-loop
+    mkdir -p /opt/pixi/envs
+    mkdir -p /etc/pixi
+    mkdir -p /tmp/matplotlib
+
+    # Install standalone pixi binary
+    export PIXI_HOME=/opt/pixi-home
+    export PIXI_BIN_DIR=/usr/local/bin
+    export PIXI_NO_PATH_UPDATE=1
+    curl -fsSL https://pixi.sh/install.sh | bash
+
+    pixi --version
+
+    # Global pixi config:
+    # store workspace envs outside the repo, inside the image
+    cat > /etc/pixi/config.toml <<'EOF'
+detached-environments = "/opt/pixi/envs"
+
+[concurrency]
+downloads = 8
+solves = 1
+EOF
+
+    # Pre-install the default environment from the lockfile
+    pixi install --manifest-path /mnt/vh-loop --environment default --frozen
+
+    # Smoke tests
+    pixi run --manifest-path /mnt/vh-loop python -V
+    pixi run --manifest-path /mnt/vh-loop python -c "import torch; print('torch', torch.__version__)"
+    pixi run --manifest-path /mnt/vh-loop python -c "import cv2; print('cv2', cv2.__version__)"
+    pixi run --manifest-path /mnt/vh-loop python -c "import hydra; print('hydra ok')"
+
+%runscript
+    cd /mnt/vh-loop 2>/dev/null || true
+
+    if [ $# -eq 0 ]; then
+        exec /bin/bash
+    else
+        exec pixi run --manifest-path /mnt/vh-loop "$@"
+    fi
+
+%test
+    set -eux
+    test -f /etc/pixi/config.toml
+    test -f /mnt/vh-loop/pixi.toml
+    test -f /mnt/vh-loop/pixi.lock
+    pixi --version
+    pixi run --manifest-path /mnt/vh-loop python -V
+    pixi run --manifest-path /mnt/vh-loop python -c "import torch; print('torch', torch.__version__)"

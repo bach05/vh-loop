@@ -424,3 +424,17 @@ pixi run python tests/compare_sample.py
 ```
 
 If your data manifests or output locations differ from defaults, update the relevant files in `configs/` or apply Hydra CLI overrides as shown above.
+
+# Containers
+
+## Singularity/Apptainer
+
+Building the container (from the repository root):
+```bash
+singularity build --fakeroot containers/singularity/vhl.sif containers/singularity/vhl.def
+```
+
+Submit a ``train_sample`` job to the cluster using the container:
+```bash
+sbatch hpc/slurm/train_sample.slurm
+```
