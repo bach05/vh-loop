@@ -62,7 +62,7 @@ flash-attn = { url = "https://huggingface.co/Wildminder/AI-windows-whl/resolve/m
 
 [tasks]
 # 1. This task forces the isolated unsloth installation
-install-unsloth = "pip install unsloth unsloth_zoo --no-deps"
+install-unsloth = "pip install unsloth==2026.5.7 unsloth_zoo==2026.5.4 --no-deps"
 # 2. A setup task that synchronizes the project and installs the package
 setup = { depends-on = ["install-unsloth"] }
 
