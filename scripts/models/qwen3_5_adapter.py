@@ -52,7 +52,7 @@ class Qwen3_5Adapter(VLMAdapter):
 
             self.model, self.tokenizer = FastVisionModel.from_pretrained(
                 model_name=model_name,
-                max_seq_length=2048,
+                max_seq_length=4096,
                 load_in_4bit=False,  # MoE QLoRA not recommended, dense 27B is fine
                 load_in_16bit=True,  # bf16/16-bit LoRA
                 full_finetuning=False,

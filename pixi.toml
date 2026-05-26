@@ -30,15 +30,15 @@ transformers = "==5.7.0"
 
 numpy = ">=2.3.1"
 einops = ">=0.8.1" # TO BE ADJUSTED
-xformers = ">=0.0.33.post2" # TO BE ADJUSTED
+xformers = ">=0.0.30" # TO BE ADJUSTED
 qwen_vl_utils = ">=0.0.14"
 #flash_attn = ">=2.7.4.post1" # Takes hours to compile, so we use a pre-built wheel instead.
 #flash_attn = { url = "https://github.com/mjun0812/flash-attention-prebuild-wheels/releases/download/v0.7.16/flash_attn-2.8.3%2Bcu128torch2.9-cp313-cp313-linux_x86_64.whl" } #pre-built wheel for flash-attn, to speedup
 
 
-accelerate = "==1.13.0" # TO BE ADJUSTED
-bitsandbytes = "==0.49.2" # TO BE ADJUSTED
-peft = "==0.19.1"
+accelerate = ">=0.30.0" # TO BE ADJUSTED
+bitsandbytes = ">=0.41" # TO BE ADJUSTED
+peft = ">=0.6" # TO BE ADJUSTED
 trl = "==1.3.0"
 
 pillow = ">=10.0" # TO BE ADJUSTED
@@ -55,23 +55,70 @@ liger-kernel = "==0.8.0" #TO BE ADJUSTED
 post-training-toolkit = {git = "https://github.com/microsoft/post-training-toolkit.git"}
 ollama="==0.6.2"
 
-
 [target.win-64.pypi-dependencies]
 flash-attn = { url = "https://huggingface.co/Wildminder/AI-windows-whl/resolve/main/flash_attn-2.8.3%2Bcu128torch2.9.1cxx11abiTRUE-cp313-cp313-win_amd64.whl" }
-
-
-[tasks]
-# 1. This task forces the isolated unsloth installation
-install-unsloth = "pip install unsloth==2026.5.7 unsloth_zoo==2026.5.4 --no-deps"
-# 2. A setup task that synchronizes the project and installs the package
-setup = { depends-on = ["install-unsloth"] }
 
 # --- PATH CONFIGURATION ---
 # This ensures 'import src.model_core' works without 'pip install -e .'
 [activation]
-scripts = []
+#scripts = [".pixi/activation.sh"]
 
 env = { PYTHONPATH = "${PYTHONPATH}:${PIXI_PROJECT_ROOT}" }
 
 [target.win-64.activation]
 env = { PYTHONPATH = "%PYTHONPATH%;%PIXI_PROJECT_ROOT%" }
+
+# --- 2. OPTIONAL UNSLOTH ENVIRONMENT (isolated from default) ---
+# This environment intentionally uses no-default-feature=true below,
+# so the default/main environment is not part of the Unsloth solve.
+[feature.unsloth]
+platforms = ["linux-64"]
+channels = ["pytorch", "nvidia", "conda-forge"]
+
+[feature.unsloth.system-requirements]
+cuda = "12.8"
+
+[feature.unsloth.dependencies]
+python = "==3.13.12"
+pip = "*"
+
+[feature.unsloth.pypi-dependencies]
+# Keep PyTorch explicit so Unsloth does not accidentally resolve a CPU wheel
+# or a different CUDA build.
+torch = { version = "==2.9.1", index = "https://download.pytorch.org/whl/cu128" }
+torchvision = { version = "==0.24.1", index = "https://download.pytorch.org/whl/cu128" }
+
+# Let Unsloth pull the compatible versions of transformers / trl / peft /
+# accelerate / bitsandbytes unless you have a strong reason to pin them.
+unsloth = "*"
+
+# Project/runtime utilities needed by your training code.
+tqdm = "*"
+PyYAML = "*"
+hydra-core = ">=1.3"
+omegaconf = ">=2.3"
+argcomplete = ">=3.6.3"
+pydantic = ">=2.0"
+numpy = ">=2.3.1"
+einops = ">=0.8.1"
+qwen_vl_utils = ">=0.0.14"
+pillow = ">=10.0"
+datasets = "*"
+opencv-python = ">=4.8.1"
+matplotlib = ">=3.8.0"
+
+[feature.unsloth.activation]
+env = { PYTHONPATH = "${PYTHONPATH}:${PIXI_PROJECT_ROOT}" }
+
+[feature.unsloth.tasks]
+check-unsloth = "python -c \"import torch; import unsloth; print('torch=', torch.__version__); print('cuda=', torch.version.cuda); print('cuda_available=', torch.cuda.is_available())\""
+
+[feature.unsloth.target.linux-64.pypi-dependencies]
+# Optional acceleration packages; keep them here, not in the default env.
+# If the solve becomes fragile, comment these out first and let Unsloth manage them.
+xformers = ">=0.0.30"
+triton = "==3.5.1"
+flash-attn = { url = "https://github.com/mjun0812/flash-attention-prebuild-wheels/releases/download/v0.7.16/flash_attn-2.8.3%2Bcu128torch2.9-cp313-cp313-linux_x86_64.whl" }
+
+[environments]
+unsloth = { features = ["unsloth"], no-default-feature = true }

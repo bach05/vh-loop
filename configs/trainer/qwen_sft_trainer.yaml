@@ -47,7 +47,7 @@ gradient_checkpointing: true          # Saves memory by recomputing activations 
 # Dataset preprocessing
 # =============================================================================
 
-max_length: 4096                      # Maximum sequence length for training. Adjust based on your dataset and GPU memory.
+#max_length: 4096                      # Maximum sequence length for training. Adjust based on your dataset and GPU memory.
 
 dataset_text_field: ""                # Unused when skip_prepare_dataset is true or when using a custom collator.
 
