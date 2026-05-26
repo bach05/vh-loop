@@ -2,6 +2,8 @@ import hydra
 from omegaconf import OmegaConf, DictConfig
 from hydra.core.hydra_config import HydraConfig
 import os
+
+import unsloth
 from scripts.core.factories import build_peft_config, build_hf_datasets
 from scripts.core.factories import DatasetBuildError
 from scripts.data.utils import train_val_split
@@ -70,7 +72,12 @@ def main(cfg: DictConfig) -> None:
     peft_config = build_peft_config(cfg.peft)
 
     trainer = HFSFTBackend(adapter, cfg.trainer, peft_config=peft_config, out_dir=out_dir)
-    trainer.setup_trainer(train_dataset=train_dataset, eval_dataset=valid_dataset, collator=None, debug=cfg.debug)
+    trainer.setup_trainer(train_dataset=train_dataset,
+                          eval_dataset=valid_dataset,
+                          collator=None,
+                          debug=cfg.debug,
+                          train_lib=train_lib
+                          )
 
     # if cfg.debug:
     #     trainer.compute_dataset_statistics(train_dataset, split_name='train', max_samples=500, batch_size=cfg.trainer.per_device_train_batch_size)
