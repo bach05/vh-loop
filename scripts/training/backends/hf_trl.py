@@ -52,6 +52,7 @@ class HFSFTBackend(TrainingBackend):
     def __init__(self, adapter: VLMAdapter, cfg, peft_config = None, out_dir='./outputs') -> None:
 
         self.model, self.processor = adapter.get_model_and_processor()
+        self.tokenizer = adapter.get_tokenizer()
         self.peft_config = peft_config
 
         peft_target_modules = adapter.get_peft_target_modules()
@@ -63,7 +64,7 @@ class HFSFTBackend(TrainingBackend):
 
         self.trainer = None
 
-    def setup_trainer(self, train_dataset, eval_dataset=None, collator=None, debug=False):
+    def setup_trainer(self, train_dataset, eval_dataset=None, collator=None, debug=False, train_lib: str = "transformers"):
 
         training_args = build_sft_config(
             cfg=self.cfg,
@@ -72,26 +73,37 @@ class HFSFTBackend(TrainingBackend):
 
         callbacks = get_callbacks(out_dir=self.output_dir)
 
-        if debug:
-            self.trainer = OOMDebugSFTTrainer(
-                model=self.model,
-                args=training_args,
-                train_dataset=train_dataset,
-                eval_dataset=eval_dataset,
-                processing_class=self.processor,
-                peft_config=self.peft_config,
-                data_collator=collator,
-            )
-        else:
+        if train_lib == "transformers":
+            if debug:
+                self.trainer = OOMDebugSFTTrainer(
+                    model=self.model,
+                    args=training_args,
+                    train_dataset=train_dataset,
+                    eval_dataset=eval_dataset,
+                    processing_class=self.processor,
+                    peft_config=self.peft_config,
+                    data_collator=collator,
+                )
+            else:
+                self.trainer = SFTTrainer(
+                    model=self.model,
+                    args=training_args,
+                    train_dataset=train_dataset,
+                    eval_dataset=eval_dataset,
+                    processing_class=self.processor,
+                    peft_config=self.peft_config,
+                    data_collator=collator,
+                    callbacks=callbacks,
+                )
+        elif train_lib == "unsloth":
+            from unsloth.trainer import UnslothVisionDataCollator
             self.trainer = SFTTrainer(
                 model=self.model,
-                args=training_args,
+                tokenizer=self.tokenizer,
+                data_collator=UnslothVisionDataCollator(self.model, self.tokenizer),  # Must use!
                 train_dataset=train_dataset,
                 eval_dataset=eval_dataset,
-                processing_class=self.processor,
-                peft_config=self.peft_config,
-                data_collator=collator,
-                callbacks=callbacks,
+                args=training_args
             )
 
     def train(self):

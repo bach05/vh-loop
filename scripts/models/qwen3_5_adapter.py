@@ -24,6 +24,8 @@ class Qwen3_5Adapter(VLMAdapter):
                 **processor_params,
             )
 
+            self.tokenizer = self.processor.tokenizer
+
             model_params = model_cfg.get("model_params", {})
             model_params = OmegaConf.to_container(model_params)
 
@@ -39,7 +41,7 @@ class Qwen3_5Adapter(VLMAdapter):
                 **model_params,
             )
         elif train_lib == "unsloth":
-            from unsloth import FastModel
+            from unsloth import FastVisionModel
 
             #rename 'Qwen/Qwen3.5-2B' to 'unsloth/Qwen3.5-2B' for unsloth
             model_name = model_cfg["model_name_or_path"]
@@ -48,13 +50,16 @@ class Qwen3_5Adapter(VLMAdapter):
             else:
                 raise ValueError(f"Cannot replace 'Qwen/' with 'unsloth/'. The given model_name_or_path is: {model_name}")
 
-            model, tokenizer = FastModel.from_pretrained(
+            self.model, self.tokenizer = FastVisionModel.from_pretrained(
                 model_name=model_name,
                 max_seq_length=2048,
                 load_in_4bit=False,  # MoE QLoRA not recommended, dense 27B is fine
                 load_in_16bit=True,  # bf16/16-bit LoRA
                 full_finetuning=False,
             )
+
+            FastVisionModel.for_training(self.model)
+            self.processor = None
 
         else:
             raise ValueError(f"Supported libraries for training: {SUPPORTED_TRAIN_LIB}. But got {train_lib}")
@@ -65,6 +70,18 @@ class Qwen3_5Adapter(VLMAdapter):
 
     def get_model_and_processor(self):
         return self.model, self.processor
+
+    def get_model(self):
+        return self.model
+
+    def get_processor(self):
+        return self.processor
+
+    def get_dataset_info(self):
+        return self.dataset_info
+
+    def get_tokenizer(self):
+        return self.tokenizer
 
     def collate_fn(self, examples):
         texts = []

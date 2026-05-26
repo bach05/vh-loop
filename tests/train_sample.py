@@ -27,6 +27,9 @@ def main(cfg: DictConfig) -> None:
     if cfg.debug:
         logging.warning("\n***********************\n*** Debug mode is ON ***\n***********************")
 
+    train_lib = cfg.get("train_lib", "transformers")
+    logging.info(f"Using training library: {train_lib}")
+
     # output dir
     hydra_cfg = HydraConfig.get()
     out_dir = hydra_cfg.run.dir
@@ -57,7 +60,7 @@ def main(cfg: DictConfig) -> None:
                                 model_cfg=cfg.model.params,
                                 dataset_info=dataset_info,
                                 quantization_config=cfg.get('quantization', None),
-                                train_lib="unsloth"
+                                train_lib=train_lib
                                 )
 
     #memory footprint
