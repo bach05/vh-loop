@@ -14,7 +14,7 @@ per_device_eval_batch_size: 2         # Number of evaluation samples per GPU/dev
 # =============================================================================
 
 num_train_epochs: 5                   # Number of full passes over the training dataset.
-max_steps: -1                        # If > 0, overrides num_train_epochs. Use -1 to disable.
+max_steps: 5000                        # If > 0, overrides num_train_epochs. Use -1 to disable.
 
 # =============================================================================
 # Optimizer and learning rate schedule
@@ -28,7 +28,7 @@ optim: "adamw_torch_fused"            # Optimizer. Fused AdamW can be faster on 
 max_grad_norm: 0.5                    # Gradient clipping threshold. Set to 0 to disable clipping.
 
 lr_scheduler_type: "cosine"         # Scheduler type: linear, cosine, constant, constant_with_warmup, etc.
-warmup_steps: 25                  # Optional warmup steps, useful with warmup-based schedules.
+warmup_steps: 100                  # Optional warmup steps, useful with warmup-based schedules.
 
 # =============================================================================
 # Precision and memory optimization
@@ -47,7 +47,7 @@ gradient_checkpointing: true          # Saves memory by recomputing activations 
 # Dataset preprocessing
 # =============================================================================
 
-max_length: null                      # For VLMs, keep null unless truncation is known to preserve image tokens.
+max_length: 4096                      # For VLMs, keep null unless truncation is known to preserve image tokens.
 
 dataset_text_field: ""                # Unused when skip_prepare_dataset is true or when using a custom collator.
 
@@ -73,7 +73,7 @@ assistant_only_loss: false            # If true, computes loss only on assistant
 
 completion_only_loss: false           # For prompt-completion datasets only. For messages-based VLM data, prefer false.
 
-use_liger_kernel: false               # Enables Liger kernels if supported. Keep false for compatibility.
+use_liger_kernel: true               # Enables Liger kernels if supported, saves a lot of VRAM. Keep false for compatibility.
 
 
 # =============================================================================
@@ -82,7 +82,7 @@ use_liger_kernel: false               # Enables Liger kernels if supported. Keep
 
 logging_strategy: "steps"             # Logging frequency mode: "no", "steps", or "epoch".
 
-logging_steps: 0.10                     # Log training progress every N optimizer steps. If float < 1, interpreted as fraction of total training steps.
+logging_steps: 250                     # Log training progress every N optimizer steps. If float < 1, interpreted as fraction of total training steps.
 
 logging_first_step: true              # Log also at the first optimization step.
 
@@ -94,9 +94,9 @@ report_to: "none"                     # Disable external reporting integrations 
 # Evaluation
 # =============================================================================
 
-eval_strategy: "epoch"                # Evaluation strategy: "no", "steps", or "epoch".
+eval_strategy: "steps"                # Evaluation strategy: "no", "steps", or "epoch".
 
-eval_steps: 25                     # Only used when eval_strategy: "steps".
+eval_steps: 500                     # Only used when eval_strategy: "steps".
 
 metric_for_best_model: "eval_loss"    # Metric used to select the best checkpoint.
 
@@ -107,9 +107,9 @@ greater_is_better: false              # false because lower eval_loss is better.
 # Checkpointing
 # =============================================================================
 
-save_strategy: "epoch"                # Save checkpoint at the end of each epoch.
+save_strategy: "steps"                # when to save checkpoints: "no", "epoch", or "steps".
 
-save_steps: 25                     # Only used when save_strategy: "steps".
+save_steps: 500                     # Only used when save_strategy: "steps".
 
 save_total_limit: 1                   # Maximum number of checkpoints to keep.
 

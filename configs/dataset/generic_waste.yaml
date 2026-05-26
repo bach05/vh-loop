@@ -1,7 +1,27 @@
 training:
-    -   id: waste_v1
+    -   id: cosmari_train_3000
         dataset_schema: conversational # conversational, prompt-completion
-        jsonl_path: ${oc.env:DATA_PATH, /data}/canonical_datasets/merged.canonical.jsonl
+        jsonl_path: ${oc.env:DATA_PATH, /data}/canonical_datasets/cosmari_cosmari_train_s3000.canonical.jsonl
+        root_override: ${oc.env:DATA_PATH, /data}
+    -   id: warpD_train
+        dataset_schema: conversational # conversational, prompt-completion
+        jsonl_path: ${oc.env:DATA_PATH, /data}/canonical_datasets/warpD_warpD_train.canonical.jsonl
+        root_override: ${oc.env:DATA_PATH, /data}
+    -   id: warpD_test
+        dataset_schema: conversational # conversational, prompt-completion
+        jsonl_path: ${oc.env:DATA_PATH, /data}/canonical_datasets/warpD_warpD_test.canonical.jsonl
+        root_override: ${oc.env:DATA_PATH, /data}
+    -   id: zerowaste_train
+        dataset_schema: conversational # conversational, prompt-completion
+        jsonl_path: ${oc.env:DATA_PATH, /data}/canonical_datasets/zerowaste_zerowaste_train.canonical.jsonl
+        root_override: ${oc.env:DATA_PATH, /data}
+    -   id: zerowaste_test
+        dataset_schema: conversational # conversational, prompt-completion
+        jsonl_path: ${oc.env:DATA_PATH, /data}/canonical_datasets/zerowaste_zerowaste_test.canonical.jsonl
+        root_override: ${oc.env:DATA_PATH, /data}
+    -   id: paniz_04-02_SINGLE
+        dataset_schema: conversational # conversational, prompt-completion
+        jsonl_path: ${oc.env:DATA_PATH, /data}/canonical_datasets/panizzolo_paniz_train_04_02_single.canonical.jsonl
         root_override: ${oc.env:DATA_PATH, /data}
 
 testing:

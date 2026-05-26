@@ -52,6 +52,7 @@ def main(cfg: DictConfig) -> None:
     logging.info(f"Validation dataset size: {len(valid_dataset)}")
 
     #Model config
+
     adapter = get_model_adapter(cfg.model.adapter,
                                 model_cfg=cfg.model.params,
                                 dataset_info=dataset_info,

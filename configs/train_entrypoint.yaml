@@ -5,7 +5,7 @@ defaults:
   - /transform: null
   - /peft: lora
   - /trainer: qwen_sft_trainer # gemma4_sft_trainer, qwen_sft_trainer
-  - /quantization: 8bit # 4bit, 8bit, null
+  - /quantization: null # 4bit, 8bit, null
   - _self_
 
 #run_id: gemma_ba_test #additional info to distinguish different runs, e.g., model name, dataset name, etc.
