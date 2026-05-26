@@ -7,4 +7,5 @@ SUPPORTED_PROMPT_STRATEGIES = ["simple_prompt"]
 SUPPORTED_TARGET_STRATEGIES = ["bbox_json_norm1000"]
 SUPPORTED_PEFT_STRATEGIES = ["LORA"]
 SUPPORTED_PROMPTING_SCHEMAS = Literal["conversational", "prompt-completion"]
+SUPPORTED_TRAIN_LIB = ["transformers", "unsloth"]
 SFT_CONVERTER_VERSION = "sft-v2.1"

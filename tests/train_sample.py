@@ -56,7 +56,9 @@ def main(cfg: DictConfig) -> None:
     adapter = get_model_adapter(cfg.model.adapter,
                                 model_cfg=cfg.model.params,
                                 dataset_info=dataset_info,
-                                quantization_config=cfg.get('quantization', None))
+                                quantization_config=cfg.get('quantization', None),
+                                train_lib="unsloth"
+                                )
 
     #memory footprint
     logging.info(f"Model memory footprint: {adapter.get_memory_footprint():.2f} GB VRAM")
