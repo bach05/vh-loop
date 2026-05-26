@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH -o logs/outputs/%x_%j.out
 #SBATCH -e logs/errors/%x_%j.err
-#SBATCH -t 24:00:00
+#SBATCH -t 96:00:00
 #SBATCH -n 2
 #SBATCH -c 2
 #SBATCH -p allgroups

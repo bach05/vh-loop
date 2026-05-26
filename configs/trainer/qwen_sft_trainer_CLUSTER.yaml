@@ -2,8 +2,8 @@
 # Batching
 # =============================================================================
 
-per_device_train_batch_size: 2        # Number of training samples per GPU/device.
-gradient_accumulation_steps: 2        # Accumulate gradients over N steps before optimizer update.
+per_device_train_batch_size: 8        # Number of training samples per GPU/device.
+gradient_accumulation_steps: 1        # Accumulate gradients over N steps before optimizer update.
 per_device_eval_batch_size: 2         # Number of evaluation samples per GPU/device.
 
 # Effective train batch size:
@@ -14,7 +14,7 @@ per_device_eval_batch_size: 2         # Number of evaluation samples per GPU/dev
 # =============================================================================
 
 num_train_epochs: 5                   # Number of full passes over the training dataset.
-max_steps: 5000                        # If > 0, overrides num_train_epochs. Use -1 to disable.
+max_steps: 2500                        # If > 0, overrides num_train_epochs. Use -1 to disable.
 
 # =============================================================================
 # Optimizer and learning rate schedule

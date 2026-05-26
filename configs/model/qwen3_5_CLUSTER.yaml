@@ -1,6 +1,6 @@
 adapter: 'qwen3_5'
 params:
-  model_name_or_path: 'Qwen/Qwen3.5-2B'
+  model_name_or_path: 'Qwen/Qwen3.5-4B'
   model_params:
     dtype: 'bfloat16'
     device_map: 'auto'
