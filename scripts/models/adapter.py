@@ -32,6 +32,9 @@ class VLMAdapter(ABC):
     def get_model_and_processor(self, cfg: dict) -> tuple[Any, Any]:
         return self.model, self.processor
 
+    def get_tokenizer(self):
+        return self.processor.tokenizer
+
     #Return model memory footprint in GB
     def get_memory_footprint(self):
         # .get_memory_footprint() returns byte

@@ -8,9 +8,10 @@ defaults:
   - /quantization: null # 4bit, 8bit, null
   - _self_
 
+train_lib: unsloth # transformers, unsloth
 #run_id: gemma_ba_test #additional info to distinguish different runs, e.g., model name, dataset name, etc.
 #log_level: info #debug, info, warning, error, critical, set to info or debug for more verbose logging
-debug: true #when set to true, the code will run in debug mode, which may include additional logging, reduced dataset size, etc. Set to false for normal operation.
+debug: false #when set to true, the code will run in debug mode, which may include additional logging, reduced dataset size, etc. Set to false for normal operation.
 #debug_iters: 100 #number of iterations to run in debug mode, only effective when debug is true
 #enable_pbar: false #whether to enable progress bar during training/evaluation, set to false to disable it
 #
