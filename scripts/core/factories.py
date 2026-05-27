@@ -126,10 +126,10 @@ def build_hf_datasets(dataset_cfg, transform_cfg=None, split='training'):
 
     if transform_cfg is not None:
         image_transforms = build_transform(transform_cfg)
-        data_set = TransformedVLMHFDataset(
-            data_set,
-            transform=image_transforms,
-        )
+    data_set = TransformedVLMHFDataset(
+        data_set,
+        transform=image_transforms if transform_cfg is not None else None,
+    )
 
     return data_set
 

@@ -46,9 +46,17 @@ def main(cfg: DictConfig) -> None:
     # NB: HERE WE ARE ASSUMING ALL THE DATASET TO FOLLOW THE SAME SCHEMA, BUT NOBODY IS CHECKING.
     # In general some fields may be different, while some fields must agree.
 
-    train_dataset = build_hf_datasets(cfg.dataset, transform_cfg=cfg.get('transform'), split='training')
+    train_dataset = build_hf_datasets(cfg.dataset,
+                                      transform_cfg=cfg.get('transform'),
+                                      split='training',
+                                      train_lib=train_lib,
+                                      )
     try:
-        valid_dataset = build_hf_datasets(cfg.dataset, transform_cfg=cfg.get('transform'), split='validation')
+        valid_dataset = build_hf_datasets(cfg.dataset,
+                                          transform_cfg=cfg.get('transform'),
+                                          split='validation',
+                                          train_lib=train_lib
+                                          )
     except DatasetBuildError as e:
         logging.warning(f"Validation dataset not found or failed to build: {e} Splitting train dataset..")
         train_dataset, valid_dataset = train_val_split(train_dataset)
@@ -57,7 +65,6 @@ def main(cfg: DictConfig) -> None:
     logging.info(f"Validation dataset size: {len(valid_dataset)}")
 
     #Model config
-
     adapter = get_model_adapter(cfg.model.adapter,
                                 model_cfg=cfg.model.params,
                                 dataset_info=dataset_info,
