@@ -13,13 +13,13 @@
 set -euo pipefail
 
 ENTRYPOINT_YAML="${1:?Missing entrypoint yaml}"
-TRAINER_CONFIG_TRAINER_CONFIG_YAMLYAML="${2:?Missing trainer config yaml}"
+TRAINER_CONFIG_YAML="${2:?Missing trainer config yaml}"
 MODEL_CONFIG_YAML="${3:?Missing model config yaml}"
 RUN_ID="${4:?Missing run_id}"
 
 WORKDIR_HOST="/nfsd/iaslab4/Users/bacchin"
 REPO_HOST="${WORKDIR_HOST}/vhl_ws/vh-loop"
-SIF_HOST="${REPO_HOST}/containers/vhl.sif"
+SIF_HOST="${REPO_HOST}/containers/singularity/vhl.sif"
 CACHE_HOST="${WORKDIR_HOST}/model_cache"
 
 
