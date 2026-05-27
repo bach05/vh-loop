@@ -5,3 +5,4 @@ outputs/
 *.sif
 logs/
 *.log
+unsloth_compiled_cache/

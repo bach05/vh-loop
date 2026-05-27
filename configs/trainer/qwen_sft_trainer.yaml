@@ -4,7 +4,7 @@
 
 per_device_train_batch_size: 4        # Number of training samples per GPU/device.
 gradient_accumulation_steps: 2        # Accumulate gradients over N steps before optimizer update.
-per_device_eval_batch_size: 2         # Number of evaluation samples per GPU/device.
+per_device_eval_batch_size: 4         # Number of evaluation samples per GPU/device.
 
 # Effective train batch size:
 # per_device_train_batch_size * gradient_accumulation_steps * num_devices
@@ -82,7 +82,7 @@ use_liger_kernel: true               # Enables Liger kernels if supported, saves
 
 logging_strategy: "steps"             # Logging frequency mode: "no", "steps", or "epoch".
 
-logging_steps: 100                     # Log training progress every N optimizer steps. If float < 1, interpreted as fraction of total training steps.
+logging_steps: 50                     # Log training progress every N optimizer steps. If float < 1, interpreted as fraction of total training steps.
 
 logging_first_step: true              # Log also at the first optimization step.
 
@@ -109,7 +109,7 @@ greater_is_better: false              # false because lower eval_loss is better.
 
 save_strategy: "steps"                # when to save checkpoints: "no", "epoch", or "steps".
 
-save_steps: 200                    # Only used when save_strategy: "steps".
+save_steps: 100                    # Only used when save_strategy: "steps".
 
 save_total_limit: 1                   # Maximum number of checkpoints to keep.
 
