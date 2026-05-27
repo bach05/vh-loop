@@ -13,6 +13,15 @@ To set up the VLM-Human Loop environment, follow these steps:
     cd vh-loop
     pixi install
 ```
+3. Install `unsloth` in the default env, avoiding dependency conflicts:
+```bash
+    pixi run setup
+````
+Note that a conflict-free environment is available through `pixi run -e unsloth`, however it downgrader important libraries such as `trl` and `peft`. 
+For details run: 
+```bash
+    pixi run -e unsloth pip list
+```
 
 # Library Design
 
