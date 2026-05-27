@@ -4,7 +4,7 @@
 
 per_device_train_batch_size: 8        # Number of training samples per GPU/device.
 gradient_accumulation_steps: 1        # Accumulate gradients over N steps before optimizer update.
-per_device_eval_batch_size: 2         # Number of evaluation samples per GPU/device.
+per_device_eval_batch_size: 8         # Number of evaluation samples per GPU/device.
 
 # Effective train batch size:
 # per_device_train_batch_size * gradient_accumulation_steps * num_devices
@@ -14,7 +14,7 @@ per_device_eval_batch_size: 2         # Number of evaluation samples per GPU/dev
 # =============================================================================
 
 num_train_epochs: 5                   # Number of full passes over the training dataset.
-max_steps: 2500                        # If > 0, overrides num_train_epochs. Use -1 to disable.
+max_steps: 1800                        # If > 0, overrides num_train_epochs. Use -1 to disable.
 
 # =============================================================================
 # Optimizer and learning rate schedule
@@ -96,7 +96,7 @@ report_to: "none"                     # Disable external reporting integrations 
 
 eval_strategy: "steps"                # Evaluation strategy: "no", "steps", or "epoch".
 
-eval_steps: 500                     # Only used when eval_strategy: "steps".
+eval_steps: 200                     # Only used when eval_strategy: "steps".
 
 metric_for_best_model: "eval_loss"    # Metric used to select the best checkpoint.
 
@@ -109,8 +109,7 @@ greater_is_better: false              # false because lower eval_loss is better.
 
 save_strategy: "steps"                # when to save checkpoints: "no", "epoch", or "steps".
 
-save_steps: 500                     # Only used when save_strategy: "steps".
-
+save_steps: 100
 save_total_limit: 1                   # Maximum number of checkpoints to keep.
 
 load_best_model_at_end: true          # Reload the best checkpoint at the end. Requires eval/save strategies to match.
