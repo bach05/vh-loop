@@ -1,25 +1,26 @@
 defaults:
   - /model: qwen3_5 # qwen3_5, gemma4
   - /experiment: schemav2
-  - /dataset: panizzolo
-  - /transform: paniz_s1000
+  - /dataset: generic_waste
+  - /transform: null
   - /peft: lora
   - /trainer: qwen_sft_trainer # gemma4_sft_trainer, qwen_sft_trainer
   - /quantization: null # 4bit, 8bit, null
   - _self_
 
+train_lib: unsloth # transformers, unsloth
 #run_id: gemma_ba_test #additional info to distinguish different runs, e.g., model name, dataset name, etc.
 #log_level: info #debug, info, warning, error, critical, set to info or debug for more verbose logging
 debug: false #when set to true, the code will run in debug mode, which may include additional logging, reduced dataset size, etc. Set to false for normal operation.
 max_debug_samples: 32 #number of iterations to run in debug mode, only effective when debug is true
 #enable_pbar: false #whether to enable progress bar during training/evaluation, set to false to disable it
 #
-#save_every: 100 #save the intermediate results every N iterations, set to 0 to disable saving
+#save_every: 100 #save the intermpixi run ediate results every N iterations, set to 0 to disable saving
 #
 #task: labelling #ident
 use_adapter: true #whether to load the fine-tuned adapter
 
-exp: v3
+exp: v4
 
 exp_name: "${hydra:runtime.choices.model}_${hydra:runtime.choices.dataset}_${hydra:runtime.choices.peft}${strip_null:${hydra:runtime.choices.quantization}}_${exp}"
 hydra:

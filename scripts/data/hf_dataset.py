@@ -211,3 +211,37 @@ class TransformedVLMHFDataset(Dataset):
 
         example["images"] = images
         return example
+
+# class UnslothVLMDataset(Dataset):
+#     """PyTorch wrapper that loads image paths from an HF row into images.
+#
+#         This class keeps the row structure produced by sample_to_message(), but
+#         replaces paths with PIL images in the conversation.
+#
+#         """
+#
+#     def __init__(self, hf_dataset, transform: Optional[Callable] = None):
+#         self.hf_dataset = hf_dataset
+#         self.transform = transform
+#
+#     def __len__(self):
+#         return len(self.hf_dataset)
+#
+#     def __getitem__(self, idx):
+#         example = dict(self.hf_dataset[idx])
+#
+#         for message_ix, message in enumerate(example.get("messages", [])):
+#             for content_ix, content in enumerate(message.get("content", [])):
+#                 if content['type'] == "image" and isinstance(content["path"], str):
+#                     img_path = content["path"]
+#                     img = Image.open(img_path).convert("RGB")
+#                     if self.transform is not None:
+#                         img = _apply_transform(self.transform, np.array(img))
+#
+#                     #substitute path with image
+#                     example['messages'][message_ix]['content'][content_ix] = {
+#                         "type": "image",
+#                         "image": img,
+#                         }
+#
+#         return example

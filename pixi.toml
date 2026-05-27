@@ -55,6 +55,7 @@ liger-kernel = "==0.8.0" #TO BE ADJUSTED
 post-training-toolkit = {git = "https://github.com/microsoft/post-training-toolkit.git"}
 ollama="==0.6.2"
 
+
 [target.win-64.pypi-dependencies]
 flash-attn = { url = "https://huggingface.co/Wildminder/AI-windows-whl/resolve/main/flash_attn-2.8.3%2Bcu128torch2.9.1cxx11abiTRUE-cp313-cp313-win_amd64.whl" }
 
