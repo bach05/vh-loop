@@ -8,4 +8,3 @@ params:
     attn_implementation: 'flash_attention_2'
   processor_params:
     max_pixels: 921600 # visual_token_number = max_pixels / (28*28), 1920x1080=2073600, 1600x1080=1728000, 1280x720=921600, 960x540=518400, higher values preserve fine details but consumes more memory. Image is resize to fit max_pixels while keeping aspect ratio, so the actual visual_token_number may be smaller than max_pixels / (28*28) depending on the input image size.
-

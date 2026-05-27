@@ -1,8 +1,11 @@
 # src/training/backends/hf_trl.py
 from trl import SFTTrainer, SFTConfig
+
+from core.factories import build_peft_config
 from scripts.training.train_backend import TrainingBackend
 from scripts.training.backends.debug_sft_trainer import OOMDebugSFTTrainer
 from scripts.models.adapter import VLMAdapter
+from scripts.core.constants import running_env
 
 from dataclasses import fields
 from omegaconf import OmegaConf
@@ -51,20 +54,19 @@ class HFSFTBackend(TrainingBackend):
 
     def __init__(self, adapter: VLMAdapter, cfg, peft_config = None, out_dir='./outputs') -> None:
 
-        self.model, self.processor = adapter.get_model_and_processor()
+        self.model, self.processor = adapter.get_model(), adapter.get_processor()
         self.tokenizer = adapter.get_tokenizer()
         self.peft_config = peft_config
 
-        peft_target_modules = adapter.get_peft_target_modules()
-        if peft_target_modules is not None and peft_config is not None:
-            self.peft_config.target_modules = peft_target_modules
+        # Add model target modules
+        self.peft_target_modules = adapter.get_peft_target_modules()
 
         self.cfg = cfg
         self.output_dir = out_dir
 
         self.trainer = None
 
-    def setup_trainer(self, train_dataset, eval_dataset=None, collator=None, debug=False, train_lib: str = "transformers"):
+    def setup_trainer(self, train_dataset, eval_dataset=None, collator=None, debug=False):
 
         training_args = build_sft_config(
             cfg=self.cfg,
@@ -73,7 +75,14 @@ class HFSFTBackend(TrainingBackend):
 
         callbacks = get_callbacks(out_dir=self.output_dir)
 
-        if train_lib == "transformers":
+        if running_env.IN_USE_TRAIN_LIB == "HFTransformers":
+            #build peft config
+            peft_params = None
+            if self.peft_target_modules is not None and self.peft_config is not None:
+                peft_cfg = OmegaConf.to_container(self.peft_config, resolve=True)
+                peft_cfg['params']['target_modules'] = self.peft_target_modules
+                peft_params = build_peft_config(peft_cfg)
+
             if debug:
                 self.trainer = OOMDebugSFTTrainer(
                     model=self.model,
@@ -81,7 +90,7 @@ class HFSFTBackend(TrainingBackend):
                     train_dataset=train_dataset,
                     eval_dataset=eval_dataset,
                     processing_class=self.processor,
-                    peft_config=self.peft_config,
+                    peft_config=peft_params,
                     data_collator=collator,
                 )
             else:
@@ -91,30 +100,20 @@ class HFSFTBackend(TrainingBackend):
                     train_dataset=train_dataset,
                     eval_dataset=eval_dataset,
                     processing_class=self.processor,
-                    peft_config=self.peft_config,
+                    peft_config=peft_params,
                     data_collator=collator,
                     callbacks=callbacks,
                 )
-        elif train_lib == "unsloth":
+        elif running_env.IN_USE_TRAIN_LIB == "unsloth":
             from unsloth.trainer import UnslothVisionDataCollator
             from unsloth import FastVisionModel
 
-            self.model = FastVisionModel.get_peft_model(
-                self.model,
-                finetune_vision_layers=True,  # False if not finetuning vision layers
-                finetune_language_layers=True,  # False if not finetuning language layers
-                finetune_attention_modules=True,  # False if not finetuning attention layers
-                finetune_mlp_modules=True,  # False if not finetuning MLP layers
-
-                r=8,  # The larger, the higher the accuracy, but might overfit
-                lora_alpha=8,  # Recommended alpha == r at least
-                lora_dropout=0,
-                bias="none",
-                random_state=3407,
-                use_rslora=False,  # We support rank stabilized LoRA
-                loftq_config=None,  # And LoftQ
-                # target_modules = "all-linear", # Optional now! Can specify a list if needed
-            )
+            if self.peft_config is not None:
+                peft_config = OmegaConf.to_container(self.peft_config)
+                self.model = FastVisionModel.get_peft_model(
+                    self.model,
+                    **peft_config
+                )
 
             self.trainer = SFTTrainer(
                 model=self.model,

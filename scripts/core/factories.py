@@ -78,10 +78,9 @@ def build_peft_config(peft_cfg):
     from scripts.core.constants import SUPPORTED_PEFT_STRATEGIES
 
     peft_config = None
-
-    if peft_cfg.strategy.lower() == "lora":
-        params = OC.to_container(peft_cfg.params, resolve=True) if peft_cfg.params else None
-        peft_config = LoraConfig(**params)
+    if peft_cfg['strategy'].lower() == "lora":
+        params = peft_cfg.get("params", None)
+        peft_config = LoraConfig(**params) if params else None
     else:
         raise PeftConfigBuildError(f"Unknown PEFT strategy '{peft_cfg.strategy}'. Supported strategies: {SUPPORTED_PEFT_STRATEGIES}")
 

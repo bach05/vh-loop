@@ -3,16 +3,7 @@ from omegaconf import OmegaConf, DictConfig
 from hydra.core.hydra_config import HydraConfig
 import os
 
-import unsloth
-from scripts.core.factories import build_peft_config, build_hf_datasets
-from scripts.core.factories import DatasetBuildError
-from scripts.data.utils import train_val_split
-from scripts.data.canonical_schema.io_utils import read_dataset_info
-
-import scripts.models  # Ensure model adapters are registered
-from scripts.core.registry import get_model_adapter
-from scripts.training.backends.hf_trl import HFSFTBackend
-
+from scripts.core.constants import running_env
 import logging
 
 OmegaConf.register_new_resolver(
@@ -29,8 +20,22 @@ def main(cfg: DictConfig) -> None:
     if cfg.debug:
         logging.warning("\n***********************\n*** Debug mode is ON ***\n***********************")
 
-    train_lib = cfg.get("train_lib", "transformers")
-    logging.info(f"Using training library: {train_lib}")
+    train_framework = cfg.get("train_framework", "unsloth")
+    running_env.set_train_framework(train_framework)
+    logging.info(f"Using training library: {running_env.IN_USE_TRAIN_LIB}")
+
+    if running_env.IN_USE_TRAIN_LIB=='unsloth':
+        import unsloth
+        logging.info(f"Using unsloth version: {unsloth.__version__}")
+
+    from scripts.core.factories import build_peft_config, build_hf_datasets
+    from scripts.core.factories import DatasetBuildError
+    from scripts.data.utils import train_val_split
+    from scripts.data.canonical_schema.io_utils import read_dataset_info
+
+    import scripts.models  # Ensure model adapters are registered
+    from scripts.core.registry import get_model_adapter
+    from scripts.training.backends.hf_trl import HFSFTBackend
 
     # output dir
     hydra_cfg = HydraConfig.get()
@@ -40,7 +45,6 @@ def main(cfg: DictConfig) -> None:
     logging.info(f"Output directory: {out_dir}")
 
     #Load data
-
     dataset_info = read_dataset_info(cfg.dataset.training[0].jsonl_path)
     logging.info(f"Dataset info loaded: {dataset_info.dataset_id}, {dataset_info.message_build_info}")
     # NB: HERE WE ARE ASSUMING ALL THE DATASET TO FOLLOW THE SAME SCHEMA, BUT NOBODY IS CHECKING.
@@ -49,13 +53,11 @@ def main(cfg: DictConfig) -> None:
     train_dataset = build_hf_datasets(cfg.dataset,
                                       transform_cfg=cfg.get('transform'),
                                       split='training',
-                                      train_lib=train_lib,
                                       )
     try:
         valid_dataset = build_hf_datasets(cfg.dataset,
                                           transform_cfg=cfg.get('transform'),
                                           split='validation',
-                                          train_lib=train_lib
                                           )
     except DatasetBuildError as e:
         logging.warning(f"Validation dataset not found or failed to build: {e} Splitting train dataset..")
@@ -68,22 +70,19 @@ def main(cfg: DictConfig) -> None:
     adapter = get_model_adapter(cfg.model.adapter,
                                 model_cfg=cfg.model.params,
                                 dataset_info=dataset_info,
-                                quantization_config=cfg.get('quantization', None),
-                                train_lib=train_lib
                                 )
 
     #memory footprint
     logging.info(f"Model memory footprint: {adapter.get_memory_footprint():.2f} GB VRAM")
 
     #Trainer config
-    peft_config = build_peft_config(cfg.peft)
+    peft_config = cfg.peft if cfg.peft is not None else None
 
     trainer = HFSFTBackend(adapter, cfg.trainer, peft_config=peft_config, out_dir=out_dir)
     trainer.setup_trainer(train_dataset=train_dataset,
                           eval_dataset=valid_dataset,
                           collator=None,
                           debug=cfg.debug,
-                          train_lib=train_lib
                           )
 
     # if cfg.debug:
