@@ -1,7 +1,9 @@
 # scripts/models/qwen_3_5_adapter.py
+import logging
+
 from omegaconf import OmegaConf
 from scripts.core.registry import register_model_adapter
-from scripts.core.constants import SUPPORTED_TRAIN_LIB
+from scripts.core.constants import SUPPORTED_TRAIN_LIB, running_env
 
 from scripts.models.adapter import VLMAdapter
 from scripts.data.canonical_schema import DatasetInfo
@@ -10,13 +12,37 @@ from torch import bfloat16 as bf16
 @register_model_adapter("qwen3_5")
 class Qwen3_5Adapter(VLMAdapter):
 
-    def __init__(self, model_cfg, dataset_info: DatasetInfo, quantization_config=None, train_lib: str = "transformers" ):
+    def __init__(self, model_cfg, dataset_info: DatasetInfo ):
 
-        if train_lib == "transformers":
-            from transformers import AutoProcessor, Qwen3_5ForConditionalGeneration
+        processor_params = model_cfg.get("processor_params", {})
+        processor_params = OmegaConf.to_container(processor_params) if processor_params else None
 
-            processor_params = model_cfg.get("processor_params", {})
-            processor_params = OmegaConf.to_container(processor_params)
+        model_params = model_cfg.get("model_params", {})
+        model_params = OmegaConf.to_container(model_params) if model_params else None
+
+        quantization_params = model_cfg.get("quantization_params", {})
+        quantization_params = OmegaConf.to_container(quantization_params) if quantization_params else None
+
+        self.target_modules = [
+                "q_proj",
+                "k_proj",
+                "v_proj",
+                "o_proj",
+                "gate_proj",
+                "up_proj",
+                "down_proj",
+            ]
+
+        ######################################################
+        # HF TRANSFORMERS TRACK ##############################
+        ######################################################
+        if running_env.IN_USE_TRAIN_LIB == "HFTransformers":
+            from transformers import AutoProcessor, Qwen3_5ForConditionalGeneration, BitsAndBytesConfig
+
+            if not processor_params:
+                raise ValueError("processor_params cannot be None")
+            if not model_params:
+                raise ValueError("model_params cannot be None")
 
             self.processor = AutoProcessor.from_pretrained(
                 model_cfg["model_name_or_path"],
@@ -26,13 +52,13 @@ class Qwen3_5Adapter(VLMAdapter):
 
             self.tokenizer = self.processor.tokenizer
 
-            model_params = model_cfg.get("model_params", {})
-            model_params = OmegaConf.to_container(model_params)
-
-            if quantization_config is not None:
-                quantization_config = OmegaConf.to_container(quantization_config)
-                quantization_config['bnb_4bit_compute_dtype'] = model_params['dtype'] if 'dtype' in model_params else bf16
-                quantization_config['bnb_4bit_quant_storage'] = model_params['dtype'] if 'dtype' in model_params else bf16
+            if quantization_params is not None:
+                # Add model-specific params
+                quantization_params['bnb_4bit_compute_dtype'] = model_params['dtype'] if 'dtype' in model_params else bf16
+                quantization_params['bnb_4bit_quant_storage'] = model_params['dtype'] if 'dtype' in model_params else bf16
+                quantization_config = BitsAndBytesConfig(**quantization_params)
+            else:
+                quantization_config = None
 
             model_params['quantization_config'] = quantization_config
 
@@ -40,36 +66,34 @@ class Qwen3_5Adapter(VLMAdapter):
                 model_cfg["model_name_or_path"],
                 **model_params,
             )
-        elif train_lib == "unsloth":
+
+        ######################################################
+        # UNSLOTH TRACK #####################################
+        ######################################################
+        elif running_env.IN_USE_TRAIN_LIB == "unsloth":
             from unsloth import FastVisionModel
+
+            if not model_params:
+                raise ValueError("model_params cannot be None")
 
             #rename 'Qwen/Qwen3.5-2B' to 'unsloth/Qwen3.5-2B' for unsloth
             model_name = model_cfg["model_name_or_path"]
-            if model_name.startswith("Qwen/"):
-                model_name = model_name.replace("Qwen/", "unsloth/")
-            else:
-                raise ValueError(f"Cannot replace 'Qwen/' with 'unsloth/'. The given model_name_or_path is: {model_name}")
+            if not(model_name.startswith("unsloth/")):
+                logging.warning(f"Model name '{model_name}' does not start with 'unsloth/'. Usually prepending 'unsloth/' for unsloth compatibility.")
 
             self.model, self.tokenizer = FastVisionModel.from_pretrained(
                 model_name=model_name,
-                max_seq_length=4096,
-                load_in_4bit=False,  # MoE QLoRA not recommended, dense 27B is fine
-                load_in_16bit=True,  # bf16/16-bit LoRA
-                full_finetuning=False,
+                **model_params
             )
 
             FastVisionModel.for_training(self.model)
             self.processor = None
 
         else:
-            raise ValueError(f"Supported libraries for training: {SUPPORTED_TRAIN_LIB}. But got {train_lib}")
+            raise ValueError(f"Supported libraries for training: {SUPPORTED_TRAIN_LIB}. But got {running_env.IN_USE_TRAIN_LIB}")
 
         self.dataset_info = dataset_info
-
         self.cfg = model_cfg
-
-    def get_model_and_processor(self):
-        return self.model, self.processor
 
     def get_model(self):
         return self.model
@@ -112,26 +136,5 @@ class Qwen3_5Adapter(VLMAdapter):
         batch["labels"] = labels
         return batch
 
-    def get_peft_target_modules(self, cfg_lora=None):
-
-        if cfg_lora is None:
-            return [
-                "q_proj",
-                "k_proj",
-                "v_proj",
-                "o_proj",
-                "gate_proj",
-                "up_proj",
-                "down_proj",
-            ]
-        else:
-            return cfg_lora.get("target_modules", [
-                "q_proj",
-                "k_proj",
-                "v_proj",
-                "o_proj",
-                "gate_proj",
-                "up_proj",
-                "down_proj",
-            ])
-
+    def get_peft_target_modules(self):
+        return self.target_modules

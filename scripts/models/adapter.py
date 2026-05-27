@@ -29,11 +29,14 @@ class VLMAdapter(ABC):
             **kwargs
         )
 
-    def get_model_and_processor(self, cfg: dict) -> tuple[Any, Any]:
-        return self.model, self.processor
+    def get_model(self):
+        return self.model
+
+    def get_processor(self):
+        return self.processor
 
     def get_tokenizer(self):
-        return self.processor.tokenizer
+        return self.tokenizer
 
     #Return model memory footprint in GB
     def get_memory_footprint(self):
@@ -41,6 +44,3 @@ class VLMAdapter(ABC):
         bytes_size = self.model.get_memory_footprint()
         # Conversion in Gigabyte (1024^3)
         return bytes_size / (1024 ** 3)
-
-    def supports_qlora(self) -> bool:
-        return True
