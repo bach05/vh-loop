@@ -1,7 +1,7 @@
 # src/training/backends/hf_trl.py
 from trl import SFTTrainer, SFTConfig
 
-from core.factories import build_peft_config
+from scripts.core.factories import build_peft_config
 from scripts.training.train_backend import TrainingBackend
 from scripts.training.backends.debug_sft_trainer import OOMDebugSFTTrainer
 from scripts.models.adapter import VLMAdapter
@@ -56,6 +56,7 @@ class HFSFTBackend(TrainingBackend):
 
         self.model, self.processor = adapter.get_model(), adapter.get_processor()
         self.tokenizer = adapter.get_tokenizer()
+        self.collate_fn = adapter.get_collate_fn()
         self.peft_config = peft_config
 
         # Add model target modules
@@ -105,7 +106,6 @@ class HFSFTBackend(TrainingBackend):
                     callbacks=callbacks,
                 )
         elif running_env.IN_USE_TRAIN_LIB == "unsloth":
-            from unsloth.trainer import UnslothVisionDataCollator
             from unsloth import FastVisionModel
 
             if self.peft_config is not None:
@@ -117,8 +117,8 @@ class HFSFTBackend(TrainingBackend):
 
             self.trainer = SFTTrainer(
                 model=self.model,
-                tokenizer=self.tokenizer,
-                data_collator=UnslothVisionDataCollator(self.model, self.tokenizer),  # Must use!
+                tokenizer=self.processor,
+                data_collator=self.collate_fn,  # Must use!
                 train_dataset=train_dataset,
                 eval_dataset=eval_dataset,
                 args=training_args

@@ -1,14 +1,13 @@
 defaults:
-  - /model: qwen3_5 # qwen3_5, gemma4
-  - /experiment: schemav2
+  - /model: qwen3_5_unsloth # qwen3_5, gemma4
+  - /experiment: test_exp
   - /dataset: generic_waste
   - /transform: null
-  - /peft: lora
+  - /peft: unsloth_peft
   - /trainer: qwen_sft_trainer # gemma4_sft_trainer, qwen_sft_trainer
-  - /quantization: null # 4bit, 8bit, null
   - _self_
 
-train_lib: unsloth # transformers, unsloth
+train_framework: unsloth # HFTransformers, unsloth
 #run_id: gemma_ba_test #additional info to distinguish different runs, e.g., model name, dataset name, etc.
 #log_level: info #debug, info, warning, error, critical, set to info or debug for more verbose logging
 debug: false #when set to true, the code will run in debug mode, which may include additional logging, reduced dataset size, etc. Set to false for normal operation.
@@ -20,7 +19,7 @@ max_debug_samples: 32 #number of iterations to run in debug mode, only effective
 #task: labelling #ident
 use_adapter: true #whether to load the fine-tuned adapter
 
-exp: v4
+exp: v5
 
 exp_name: "${hydra:runtime.choices.model}_${hydra:runtime.choices.dataset}_${hydra:runtime.choices.peft}${strip_null:${hydra:runtime.choices.quantization}}_${exp}"
 hydra:
