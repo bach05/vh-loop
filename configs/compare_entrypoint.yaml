@@ -14,6 +14,8 @@ predictions:
     path: ${oc.env:MODEL_PATH, /models}/vhloop/testing/qwen3_5_panizzolo_lora_v3/predictions.jsonl
   - name: qwen_lora_V4
     path: ${oc.env:MODEL_PATH, /models}/vhloop/testing/qwen3_5_generic_waste_lora_v4/predictions.jsonl
+  - name: qwen_lora_V5
+    path: ${oc.env:MODEL_PATH, /models}/vhloop/testing/qwen3_5_unsloth_generic_waste_unsloth_peft_v5/predictions.jsonl
 #  - name: qwen_lora
 #    path: ${oc.env:MODEL_PATH, /models}/vhloop/testing/qwen3_5_panizzolo_lora/predictions.jsonl
 #  - name: qwen
