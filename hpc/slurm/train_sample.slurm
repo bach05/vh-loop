@@ -6,20 +6,20 @@
 #SBATCH -c 2
 #SBATCH -p allgroups
 #SBATCH --gres=gpu:a40:2
-#SBATCH --mem=8G
+#SBATCH --mem=32G
 #SBATCH --mail-user=bacchinalb@dei.unipd.it
 #SBATCH --mail-type=ALL
 
 set -euo pipefail
 
 ENTRYPOINT_YAML="${1:?Missing entrypoint yaml}"
-TRAINER_CONFIG_TRAINER_CONFIG_YAMLYAML="${2:?Missing trainer config yaml}"
+TRAINER_CONFIG_YAML="${2:?Missing trainer config yaml}"
 MODEL_CONFIG_YAML="${3:?Missing model config yaml}"
 RUN_ID="${4:?Missing run_id}"
 
 WORKDIR_HOST="/nfsd/iaslab4/Users/bacchin"
 REPO_HOST="${WORKDIR_HOST}/vhl_ws/vh-loop"
-SIF_HOST="${REPO_HOST}/containers/vhl.sif"
+SIF_HOST="${REPO_HOST}/containers/singularity/vhl.sif"
 CACHE_HOST="${WORKDIR_HOST}/model_cache"
 
 
@@ -28,10 +28,10 @@ DATA_BIND_SRC="/nfsd/iaslab4/Users/bacchin/datasets"
 
 # Writable Pixi folders on the host. Avoid to rebuild sif every time Pixi needs to update its envs or cache, which happens at every run otherwise.
 # This fixes the read-only error caused by Pixi trying to write under /opt/pixi/envs inside the SIF.
-PIXI_ENV_HOST="${CACHE_HOST}/pixi/envs"
+# PIXI_ENV_HOST="${CACHE_HOST}/pixi/envs"
 PIXI_CACHE_HOST="${CACHE_HOST}/pixi/cache"
 
-mkdir -p "${PIXI_ENV_HOST}"
+#mkdir -p "${PIXI_ENV_HOST}"
 mkdir -p "${PIXI_CACHE_HOST}"
 mkdir -p "${CACHE_HOST}/huggingface"
 mkdir -p "${CACHE_HOST}/xdg"
@@ -72,7 +72,7 @@ echo "REPO_HOST     : ${REPO_HOST}"
 echo "SIF_HOST      : ${SIF_HOST}"
 echo "DATA_BIND_SRC : ${DATA_BIND_SRC}"
 echo "CACHE_HOST    : ${CACHE_HOST}"
-echo "PIXI_ENV_HOST : ${PIXI_ENV_HOST}"
+#echo "PIXI_ENV_HOST : ${PIXI_ENV_HOST}"
 echo "PIXI_CACHE    : ${PIXI_CACHE_HOST}"
 echo "HOST_LOG      : ${HOST_LOG}"
 echo "SLURM_JOB_ID  : ${SLURM_JOB_ID:-manual}"
@@ -86,7 +86,6 @@ singularity exec \
   --bind "${REPO_HOST}:/mnt/vh-loop" \
   --bind "${DATA_BIND_SRC}:/data" \
   --bind "${CACHE_HOST}:/models" \
-  --bind "${PIXI_ENV_HOST}:/opt/pixi/envs" \
   "${SIF_HOST}" \
   pixi run --manifest-path /mnt/vh-loop \
   python /mnt/vh-loop/tests/train_sample.py \
@@ -94,3 +93,7 @@ singularity exec \
     "trainer=${TRAINER_CONFIG_YAML}" \
     "model=${MODEL_CONFIG_YAML}" \
   2>&1 | tee "${HOST_LOG}"
+
+
+# Examle command to submit the job: 
+# sbatch hpc/slurm/train_sample.slurm train_entrypoint.yaml qwen_sft_trainer_CLUSTER qwen3_5_CLUSTER qwen_4B
