@@ -48,8 +48,8 @@ datasets = "==4.8.5"
 
 [target.linux-64.pypi-dependencies]
 flash-attn = { url = "https://github.com/mjun0812/flash-attention-prebuild-wheels/releases/download/v0.7.16/flash_attn-2.8.3%2Bcu128torch2.9-cp313-cp313-linux_x86_64.whl" }
-flash-linear-attention = ">=0.4.1" #to speedup qwen 3.5
-causal-conv1d = ">=1.6.1" #to speedup qwen 3.5
+flash-linear-attention = "==0.5.0" #to speedup qwen 3.5
+causal-conv1d = "==1.6.1" #to speedup qwen 3.5
 triton = "==3.5.1"
 liger-kernel = "==0.8.0" #TO BE ADJUSTED
 post-training-toolkit = {git = "https://github.com/microsoft/post-training-toolkit.git"}

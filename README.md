@@ -453,7 +453,6 @@ Currently the supported formats are:
 More datasets formats can be added by implementing new converter classes in `scripts/data_mining/converters/detection_dataset_grounders.py` and adding the corresponding dataset-specific config files in `configs/data_mining/converters/dataset_grounding_configs`.
 
 ```bash
-
 # Containers
 
 ## Singularity/Apptainer
@@ -461,6 +460,17 @@ More datasets formats can be added by implementing new converter classes in `scr
 Building the container (from the repository root):
 ```bash
 singularity build --fakeroot containers/singularity/vhl.sif containers/singularity/vhl.def
+```
+
+Run the container: 
+```bash
+singularity exec --nv \
+--cleanenv \
+--bind ~/vh-loop_env/:/mnt \
+--bind /media/iaslab/data_bacchin:/data \
+--bind /media/data/models:/models \
+./containers/singularity/vhl.sif \
+pixi run --manifest-path /mnt/vh-loop  python 
 ```
 
 Submit a ``train_sample`` job to the cluster using the container:
