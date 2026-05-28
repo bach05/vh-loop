@@ -67,11 +67,43 @@ class Qwen3_5Adapter(VLMAdapter):
                 **model_params,
             )
 
+            #collate_fn
+            def collate_fn(examples):
+                texts = []
+                images = []
+
+                for example in examples:
+                    text = self.processor.apply_chat_template(
+                        example["messages"],
+                        add_generation_prompt=False,
+                        tokenize=False,
+                    )
+
+                    texts.append(text.strip())
+                    images.append(example["images"])
+
+                batch = self.processor(
+                    text=texts,
+                    images=images,
+                    return_tensors="pt",
+                    padding=True,
+                )
+
+                labels = batch["input_ids"].clone()
+
+                labels[labels == self.processor.tokenizer.pad_token_id] = -100
+                labels[labels == self.processor.tokenizer.image_token_id] = -100
+
+                batch["labels"] = labels
+                return batch
+
+            self.collate_fn = collate_fn
+
         ######################################################
         # UNSLOTH TRACK #####################################
         ######################################################
         elif running_env.IN_USE_TRAIN_LIB == "unsloth":
-            from unsloth import FastVisionModel
+            from unsloth import FastVisionModel, UnslothVisionDataCollator
 
             if not model_params:
                 raise ValueError("model_params cannot be None")
@@ -81,13 +113,14 @@ class Qwen3_5Adapter(VLMAdapter):
             if not(model_name.startswith("unsloth/")):
                 logging.warning(f"Model name '{model_name}' does not start with 'unsloth/'. Usually prepending 'unsloth/' for unsloth compatibility.")
 
-            self.model, self.tokenizer = FastVisionModel.from_pretrained(
+            self.model, self.processor = FastVisionModel.from_pretrained(
                 model_name=model_name,
                 **model_params
             )
 
             FastVisionModel.for_training(self.model)
-            self.processor = None
+            self.collate_fn = UnslothVisionDataCollator(self.model, self.processor)
+            self.tokenizer = self.processor.tokenizer
 
         else:
             raise ValueError(f"Supported libraries for training: {SUPPORTED_TRAIN_LIB}. But got {running_env.IN_USE_TRAIN_LIB}")
@@ -107,34 +140,8 @@ class Qwen3_5Adapter(VLMAdapter):
     def get_tokenizer(self):
         return self.tokenizer
 
-    def collate_fn(self, examples):
-        texts = []
-        images = []
-
-        for example in examples:
-            text = self.processor.apply_chat_template(
-                example["messages"],
-                add_generation_prompt=False,
-                tokenize=False,
-            )
-
-            texts.append(text.strip())
-            images.append(example["images"])
-
-        batch = self.processor(
-            text=texts,
-            images=images,
-            return_tensors="pt",
-            padding=True,
-        )
-
-        labels = batch["input_ids"].clone()
-
-        labels[labels == self.processor.tokenizer.pad_token_id] = -100
-        labels[labels == self.processor.tokenizer.image_token_id] = -100
-
-        batch["labels"] = labels
-        return batch
+    def get_collate_fn(self):
+        return self.collate_fn
 
     def get_peft_target_modules(self):
         return self.target_modules

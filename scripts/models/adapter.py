@@ -13,10 +13,6 @@ class VLMAdapter(ABC):
     dataset_info: DatasetInfo
 
     @abstractmethod
-    def collate_fn(self, examples) -> dict:
-        pass
-
-    @abstractmethod
     def get_peft_target_modules(self, cfg: dict = None) -> list[str]:
         pass
 
@@ -37,6 +33,9 @@ class VLMAdapter(ABC):
 
     def get_tokenizer(self):
         return self.tokenizer
+
+    def get_collate_fn(self):
+        return self.collate_fn
 
     #Return model memory footprint in GB
     def get_memory_footprint(self):

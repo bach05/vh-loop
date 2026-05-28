@@ -26,6 +26,7 @@ from hydra.core.hydra_config import HydraConfig
 from omegaconf import DictConfig, OmegaConf
 from tqdm import tqdm
 
+from scripts.core.constants import running_env
 from scripts.core.factories import DatasetBuildError, build_transform
 from scripts.core.registry import get_model_adapter
 from scripts.data.canonical_dataset import CanonicalDataset, InferenceCanonicalDataset
@@ -235,6 +236,10 @@ def main(cfg: DictConfig) -> None:
     if cfg.debug:
         logging.warning("\n\n************************\n*** Debug mode is ON ***\n************************\n\n")
 
+    train_framework = cfg.get("train_framework", "unsloth")
+    running_env.set_train_framework(train_framework)
+    logging.info(f"Using training library: {running_env.IN_USE_TRAIN_LIB}")
+
     hydra_cfg = HydraConfig.get()
     out_dir = hydra_cfg.run.dir
     if not cfg.use_adapter:
@@ -300,13 +305,12 @@ def main(cfg: DictConfig) -> None:
     adapter = get_model_adapter(
         cfg.model.adapter,
         model_cfg=cfg.model.params,
-        quantization_config=cfg.get("quantization", None),
         dataset_info=dataset_info
     )
 
-    base_model, processor = adapter.get_model_and_processor()
+    base_model, processor = adapter.get_model(), adapter.get_processor()
 
-    if cfg.use_adapter and cfg.peft is not None and cfg.peft.strategy.lower() == "lora":
+    if cfg.use_adapter:
         logging.info("Loading LoRA adapter from: %s", checkpoint_path)
         from peft import PeftModel
 
@@ -314,7 +318,7 @@ def main(cfg: DictConfig) -> None:
         logging.info("LoRA adapter loaded.")
     else:
         model = base_model
-        logging.info("No PEFT adapter configured, using base model.")
+        logging.info("Using base model.")
 
     model.eval()
     torch.set_grad_enabled(False)
