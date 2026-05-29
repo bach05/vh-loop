@@ -466,11 +466,15 @@ Run the container:
 ```bash
 singularity exec --nv \
 --cleanenv \
+--env NCCL_IB_DISABLE="1" \
+--env NCCL_P2P_DISABLE="1" \
+--env CUDA_DEVICE_ORDER=PCI_BUS_ID \
+--env CUDA_VISIBLE_DEVICES="2" \
 --bind ~/vh-loop_env/:/mnt \
 --bind /media/iaslab/data_bacchin:/data \
 --bind /media/data/models:/models \
 ./containers/singularity/vhl.sif \
-pixi run --manifest-path /mnt/vh-loop  python 
+pixi run --manifest-path /mnt/vh-loop python 
 ```
 
 Submit a ``train_sample`` job to the cluster using the container:

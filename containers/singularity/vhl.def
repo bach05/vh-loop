@@ -35,7 +35,7 @@ From: nvidia/cuda:12.8.0-cudnn-devel-ubuntu22.04
     export DEBIAN_FRONTEND=noninteractive
 
     # Fixed project path inside container
-    export VHL_ROOT=/mnt/vh-loop
+    export DLDOJO_ROOT=/mnt/vh-loop
     export PIXI_PROJECT_ROOT=/mnt/vh-loop
     export PYTHONPATH=/mnt/vh-loop:${PYTHONPATH}
 
@@ -43,7 +43,7 @@ From: nvidia/cuda:12.8.0-cudnn-devel-ubuntu22.04
     export PIXI_FROZEN=true
 
     # Common runtime settings
-    export TOKENIZERS_PARA=false
+    export TOKENIZERS_PARALLELISM=false
     export MPLCONFIGDIR=/tmp/matplotlib
 
     # These can be overridden from Slurm with APPTAINERENV_* / SINGULARITYENV_*
@@ -102,8 +102,8 @@ downloads = 8
 solves = 1
 EOF
 
-    # Pre-install the default environment from the lockfile
-    pixi install --manifest-path /mnt/vh-loop --environment default --frozen
+    # Pre-install the default environment from toml
+    pixi install --manifest-path /mnt/vh-loop
     pixi run --manifest-path /mnt/vh-loop setup
 
     # Smoke tests
@@ -111,6 +111,7 @@ EOF
     pixi run --manifest-path /mnt/vh-loop python -c "import torch; print('torch', torch.__version__)"
     pixi run --manifest-path /mnt/vh-loop python -c "import cv2; print('cv2', cv2.__version__)"
     pixi run --manifest-path /mnt/vh-loop python -c "import hydra; print('hydra ok')"
+    pixi run --manifest-path /mnt/vh-loop python -c "import causal_conv1d; print('causal_conv1d ok')"
 
 %runscript
     cd /mnt/vh-loop 2>/dev/null || true
