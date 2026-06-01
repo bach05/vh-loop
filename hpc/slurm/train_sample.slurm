@@ -28,7 +28,7 @@ DATA_BIND_SRC="/nfsd/iaslab4/Users/bacchin/datasets"
 
 # Writable Pixi folders on the host. Avoid to rebuild sif every time Pixi needs to update its envs or cache, which happens at every run otherwise.
 # This fixes the read-only error caused by Pixi trying to write under /opt/pixi/envs inside the SIF.
-# PIXI_ENV_HOST="${CACHE_HOST}/pixi/envs"
+PIXI_ENV_HOST="${CACHE_HOST}/pixi/envs"
 PIXI_CACHE_HOST="${CACHE_HOST}/pixi/cache"
 
 #mkdir -p "${PIXI_ENV_HOST}"
@@ -83,16 +83,20 @@ cd "${REPO_HOST}"
 singularity exec \
   --cleanenv \
   --nv \
-  --bind "${REPO_HOST}:/mnt/vh-loop" \
+  --bind "${REPO_HOST}:/workspace/vh-loop" \
   --bind "${DATA_BIND_SRC}:/data" \
   --bind "${CACHE_HOST}:/models" \
   "${SIF_HOST}" \
-  pixi run --manifest-path /mnt/vh-loop \
-  python /mnt/vh-loop/tests/train_sample.py \
-    --config-name "${ENTRYPOINT_YAML}" \
-    "trainer=${TRAINER_CONFIG_YAML}" \
-    "model=${MODEL_CONFIG_YAML}" \
-  2>&1 | tee "${HOST_LOG}"
+  bash -lc '
+    export PYTHONPATH=/workspace/vh-loop:/mnt/vh-loop:${PYTHONPATH}
+    cd /workspace/vh-loop
+
+    pixi run --manifest-path /mnt/vh-loop \
+      python tests/train_sample.py \
+        --config-name "'"${ENTRYPOINT_YAML}"'" \
+        trainer="'"${TRAINER_CONFIG_YAML}"'" \
+        model="'"${MODEL_CONFIG_YAML}"'"
+  ' 2>&1 | tee "${HOST_LOG}"
 
 
 # Examle command to submit the job:
