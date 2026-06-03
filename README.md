@@ -485,3 +485,22 @@ sbatch hpc/slurm/train_sample.slurm \
   quen_3_5_CLUSTER \
   qwen_test
 ```
+
+# Install and Run Ollama 
+
+We use ollama to serve large models for inference in order to augment datasets. 
+
+## Installation 
+
+Install ollama manually: 
+```bash
+curl -fsSL https://ollama.com/download/ollama-linux-amd64.tar.zst | sudo tar x --zstd -C [target_folder]
+```
+Pull a model for local serving (e.g. `qwen-`):
+```bash
+[target_folder]/bin/ollama pull qwen3.6:latest
+```
+Run the ollama server:
+```bash
+[target_folder]/bin/ollama serve
+``` 
