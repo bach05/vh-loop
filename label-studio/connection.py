@@ -3,6 +3,7 @@
 
 import time
 from pathlib import Path
+from urllib.parse import urlparse
 
 from label_studio_sdk import LabelStudio
 
@@ -13,7 +14,7 @@ def make_client(api_key: str, base_url: str = "http://localhost:8080") -> LabelS
 
 
 def load_label_config(path: Path) -> str:
-    """Reads and returns the XML labelling configuration from disk."""
+    """Reads and returns the XML labeling configuration from disk."""
     if not path.exists():
         raise FileNotFoundError(f"Labeling config not found: {path}")
     return path.read_text(encoding="utf-8").strip()
@@ -69,7 +70,6 @@ def setup_local_storage(
     Creates a local file source storage connection for the project.
     storage_path must be a subfolder of LABEL_STUDIO_LOCAL_FILES_DOCUMENT_ROOT.
     """
-    # LS on Windows needs single backslashes in the API path field
     path_str = str(storage_path.absolute())
 
     try:
@@ -126,8 +126,13 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    print("Checking Label Studio is reachable...")
-    wait_for_port("127.0.0.1", 8080)
+    parsed = urlparse(args.ls_url)
+    host = parsed.hostname or "127.0.0.1"
+    port = parsed.port or (443 if parsed.scheme == "https" else 80)
+    wait_for_port(host, port)
+
+    print(f"Checking Label Studio is reachable at {host}:{port}...")
+    wait_for_port(host, port)
 
     client = make_client(args.api_key, args.ls_url)
     config_xml = load_label_config(args.label_config)

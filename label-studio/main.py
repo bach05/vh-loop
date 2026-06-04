@@ -3,6 +3,7 @@
 
 import argparse
 from pathlib import Path
+from urllib.parse import urlparse
 
 from services import wait_for_port, start_label_studio, start_sam_backend
 from connection import make_client, load_label_config, get_or_create_project, connect_ml_backend, setup_local_storage
@@ -60,7 +61,10 @@ def main() -> None:
         start_label_studio(args.conda_root, args.ls_conda_env, args.images_root, args.ls_port)
     else:
         print("STEP 1/5: check if Label Studio is reachable...")
-        wait_for_port("127.0.0.1", args.ls_port)
+        parsed = urlparse(args.ls_url)
+        host = parsed.hostname or "127.0.0.1"
+        port = parsed.port or (443 if parsed.scheme == "https" else 80)
+        wait_for_port(host, port)
     print("STEP 1/5 completed.\n")
 
     # ------------------------------------------------------------------ #

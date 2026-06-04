@@ -31,12 +31,10 @@ def start_label_studio(
     ls_exe = env_dir / "Scripts" / "label-studio.exe"
 
     os.environ["LABEL_STUDIO_LOCAL_FILES_SERVING_ENABLED"] = "true"
-    os.environ["LABEL_STUDIO_LOCAL_FILES_DOCUMENT_ROOT"] = (
-        str(images_root.absolute()).replace("/", "\\").replace("\\", "\\\\")
-    )
+    os.environ["LABEL_STUDIO_LOCAL_FILES_DOCUMENT_ROOT"] = str(images_root.resolve())
     os.environ["LABEL_STUDIO_CORS_ALLOWED_ORIGINS"] = "*"
 
-    subprocess.Popen([str(ls_exe), "start"], creationflags=subprocess.CREATE_NEW_CONSOLE)
+    subprocess.Popen([str(ls_exe), "start"], creationflags=getattr(subprocess, "CREATE_NEW_CONSOLE", 0))
     print(f"Waiting for Label Studio to open on port {port}...")
     wait_for_port("127.0.0.1", port)
 
@@ -61,7 +59,7 @@ def start_sam_backend(
     subprocess.Popen(
         [str(ml_exe), "start", "./segment_anything_2_image", "-p", str(port)],
         cwd=str(backend_dir),
-        creationflags=subprocess.CREATE_NEW_CONSOLE,
+        creationflags=getattr(subprocess, "CREATE_NEW_CONSOLE", 0),
     )
     wait_for_port("127.0.0.1", port, timeout_s=180)
 '''
@@ -72,7 +70,7 @@ def start_sam_backend(bat_path: Path, port: int = 9090) -> None:
 
     subprocess.Popen(
         ["cmd.exe", "/c", str(bat_path)],
-        creationflags=subprocess.CREATE_NEW_CONSOLE,
+        creationflags=getattr(subprocess, "CREATE_NEW_CONSOLE", 0),
     )
     wait_for_port("127.0.0.1", port, timeout_s=180)
 

@@ -59,9 +59,6 @@ def read_samples(jsonl_path: Path) -> Tuple[List[Dict[str, Any]], str]:
 
             samples.append(data)
 
-            if "dataset_id" in data:
-                dataset_id = data["dataset_id"]
-
         except json.JSONDecodeError as e:
             print(f"JSON decode error line {i + 1}: {e}")
             print(f"Problematic line content: {line[:100]}...")
@@ -73,10 +70,14 @@ def build_predictions(instances: List[Dict[str, Any]], img_w: int, img_h: int) -
     """ Converts JSONL target instances into Label Studio prediction results. """
     results = []
     for inst in instances:
-        label_id = inst.get("label")
-        label_name = LABEL_MAP.get(label_id)
+        label_name = inst.get("label_name")
+
         if not label_name:
-            print(f"WARNING: label ID {label_id} not found within LABEL_MAP, skip.")
+            label_id = inst.get("label_id")
+            label_name = LABEL_MAP.get(label_id)
+
+        if not label_name:
+            print(f"WARNING: missing label")
             continue
 
         mask = inst.get("mask")
@@ -114,27 +115,31 @@ def build_predictions(instances: List[Dict[str, Any]], img_w: int, img_h: int) -
 
 
 def build_tasks(samples: List[Dict[str, Any]], storage_path: Path) -> List[Dict]:
-    """
-    Converts raw JSONL samples into Label Studio task dicts.
-    Maps to the $image and $sample_id variables in XML config.
-    """
+    """ Converts raw JSONL samples into Label Studio task dicts. """
     tasks = []
     for i, s in enumerate(samples):
+
+        sample = s.get("sample", {})
+        sample_id = sample.get("sample_id", f"idx_{i}")
+        assets = sample.get("assets", [])
+
+        if not assets:
+            print(f"WARNING: sample {sample_id} has no assets")
+            continue
+
+        asset = assets[0]
+
         raw_path = (
-            s.get("image_path")
-            or s.get("image")
-            or s.get("file_path")
-            or (s.get("images", {}).get("query", {}) or {}).get("path")
+                asset.get("uri")
+                or asset.get("metadata", {}).get("original_file_name")
         )
 
         if not raw_path:
-            print(
-                f"WARNING: Skipping line {i}, no valid image key found. "
-                f"Keys: {list(s.keys())}"
-            )
+            print(f"WARNING: sample {sample_id} missing image uri")
             continue
 
         img_path = Path(raw_path)
+
         if not img_path.is_absolute():
             img_path = (storage_path / raw_path).resolve()
 
@@ -144,18 +149,23 @@ def build_tasks(samples: List[Dict[str, Any]], storage_path: Path) -> List[Dict]
             rel_path = img_path.as_posix()
 
         image_url = f"/data/local-files/?d={quote(rel_path)}"
-        # Image dimensions for LS coordinate context
-        img_size = s.get("images", {}).get("query", {}).get("size", [0, 0])
-        img_w, img_h = img_size[0], img_size[1]
+        img_size = asset.get("size", [0, 0])
 
-        # Build pre-annotations from target instances
-        instances = s.get("target", {}).get("instances", [])
-        prediction_results = build_predictions(instances, img_w, img_h)
+        img_w = img_size[0]
+        img_h = img_size[1]
+
+        annotations = asset.get("annotations", [])
+
+        prediction_results = build_predictions(
+            annotations,
+            img_w,
+            img_h,
+        )
 
         task: Dict[str, Any] = {
             "data": {
                 "image": image_url,
-                "sample_id": s.get("sample_id", f"idx_{i}"),
+                "sample_id": sample_id,
                 "storage_path": str(img_path),
             }
         }
