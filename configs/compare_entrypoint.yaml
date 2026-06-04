@@ -1,4 +1,4 @@
-gt_jsonl: ${oc.env:DATA_PATH, /data}/panizzolo/paniz_test_03_30_SINGLE.canonical_v2.jsonl
+gt_jsonl: ${oc.env:DATA_PATH, /data}/canonical_datasets/panizzolo_paniz_train_04_02_single.canonical.jsonl #panizzolo/paniz_test_03_30_SINGLE.canonical_v2.jsonl
 
 # Option A: explicit list
 predictions:
@@ -8,14 +8,14 @@ predictions:
   #   path: ${oc.env:MODEL_PATH, /models}/vhloop/testing/gemma4_panizzolo2_lora/predictions.jsonl
   # - name: gemma
   #   path: ${oc.env:MODEL_PATH, /models}/vhloop/testing/gemma4_panizzolo_lora_ORI_MODEL/predictions.jsonl
-  - name: qwen_lora_V2
-    path: ${oc.env:MODEL_PATH, /models}/vhloop/testing/qwen3_5_panizzolo_lora_schemav2/predictions.jsonl
-  - name: qwen_lora_V3
-    path: ${oc.env:MODEL_PATH, /models}/vhloop/testing/qwen3_5_panizzolo_lora_v3/predictions.jsonl
-  - name: qwen_lora_V4
-    path: ${oc.env:MODEL_PATH, /models}/vhloop/testing/qwen3_5_generic_waste_lora_v4/predictions.jsonl
-  - name: qwen_lora_V5
-    path: ${oc.env:MODEL_PATH, /models}/vhloop/testing/qwen3_5_unsloth_generic_waste_unsloth_peft_v5/predictions.jsonl
+  - name: qwen_lora_V6
+    path: ${oc.env:MODEL_PATH, /models}/vhloop/testing/qwen3_5_unsloth_generic_waste2_unsloth_peft_v6/predictions.jsonl
+  # - name: qwen_lora_V3
+  #   path: ${oc.env:MODEL_PATH, /models}/vhloop/testing/qwen3_5_panizzolo_lora_v3/predictions.jsonl
+  # - name: qwen_lora_V4
+  #   path: ${oc.env:MODEL_PATH, /models}/vhloop/testing/qwen3_5_generic_waste_lora_v4/predictions.jsonl
+  # - name: qwen_lora_V5
+  #   path: ${oc.env:MODEL_PATH, /models}/vhloop/testing/qwen3_5_unsloth_generic_waste_unsloth_peft_v5/predictions.jsonl
 #  - name: qwen_lora
 #    path: ${oc.env:MODEL_PATH, /models}/vhloop/testing/qwen3_5_panizzolo_lora/predictions.jsonl
 #  - name: qwen
@@ -45,7 +45,7 @@ visualization:
 
   # If null, paths are resolved relative to current working directory.
   # Use this if ImageAsset.path inside the JSONL is relative.
-  image_root: ${oc.env:DATA_PATH, /data}/panizzolo
+  image_root: ${oc.env:DATA_PATH, /data}
 
   # If empty, the script will visualize the first N samples.
   sample_ids: []
