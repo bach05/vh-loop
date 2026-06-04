@@ -146,10 +146,7 @@ def bbox_to_pixel_xyxy(bbox: Dict[str, Any], img_w: int, img_h: int) -> Tuple[in
 
 
 def binary_mask_to_rle(mask: np.ndarray) -> Dict[str, Any]:
-    """
-    Convert binary mask (H, W) to COCO-style RLE:
-      {"counts": "...", "size": [H, W]}
-    """
+    """ Convert binary mask (H, W) to COCO-style RLE: {"counts": "...", "size": [H, W]} """
     if mask.dtype != np.uint8:
         mask = mask.astype(np.uint8)
 
