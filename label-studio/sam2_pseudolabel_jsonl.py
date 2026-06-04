@@ -16,8 +16,6 @@ from pycocotools import mask as mask_utils
 from sam2.build_sam import build_sam2
 from sam2.sam2_image_predictor import SAM2ImagePredictor
 
-NORM_SIZE_DEFAULT = 1000
-
 
 # ----------------------------
 # JSONL utilities
@@ -65,20 +63,31 @@ def _candidate_paths(raw_path: str, images_root: Path) -> List[Path]:
     return candidates
 
 
-def find_image_path(sample: Dict[str, Any], images_root: Path, recursive_search: bool = True) -> Path:
+def find_image_path(sample_record: Dict[str, Any], images_root: Path, recursive_search: bool = True) -> Path:
     """
-    Resolve the local image path using the JSONL sample.
+    Resolve the local image path using JSONL sample.
     Priority:
-      1) images.query.path
-      2) image_path / image / file_path / metadata.original_file_name
+      1) sample.assets[].uri
+      2) sample.assets[].metadata.original_file_name
       3) basename search under images_root
     """
+    sample = sample_record.get("sample", sample_record)
+    raw_path = None
+
+    assets = sample.get("assets", [])
+    if assets and isinstance(assets, list):
+        first_asset = assets[0]
+        if isinstance(first_asset, dict):
+            raw_path = (
+                    first_asset.get("uri")
+                    or first_asset.get("metadata", {}).get("original_file_name")
+            )
+
     raw_path = (
-        sample.get("images", {}).get("query", {}).get("path")
-        or sample.get("image_path")
-        or sample.get("image")
-        or sample.get("file_path")
-        or sample.get("metadata", {}).get("original_file_name")
+            raw_path
+            or sample.get("images", {}).get("query", {}).get("path")
+            or sample.get("image")
+            or sample.get("metadata", {}).get("original_file_name")
     )
 
     if not raw_path:
@@ -108,23 +117,20 @@ def load_image_rgb(image_path: Path) -> np.ndarray:
 # Geometry / mask encoding
 # ----------------------------
 
-def bbox_norm_to_pixel_xyxy(
-    bbox: Dict[str, Any],
-    img_w: int,
-    img_h: int,
-    norm_size: int = NORM_SIZE_DEFAULT,
-) -> Tuple[int, int, int, int]:
-    """
-    Convert schema bbox {tl:{x,y}, br:{x,y}} from normalized coordinates to pixels.
-    The schema scales x and y independently to image width/height.
-    """
+def bbox_to_pixel_xyxy(bbox: Dict[str, Any], img_w: int, img_h: int) -> Tuple[int, int, int, int]:
+    """ Convert bbox to pixel xyxy. """
     tl = bbox.get("tl", {})
     br = bbox.get("br", {})
 
-    x0 = int(round(float(tl["x"]) * img_w / norm_size))
-    y0 = int(round(float(tl["y"]) * img_h / norm_size))
-    x1 = int(round(float(br["x"]) * img_w / norm_size))
-    y1 = int(round(float(br["y"]) * img_h / norm_size))
+    x0_raw = float(tl["x"])
+    y0_raw = float(tl["y"])
+    x1_raw = float(br["x"])
+    y1_raw = float(br["y"])
+
+    x0 = int(round(x0_raw))
+    y0 = int(round(y0_raw))
+    x1 = int(round(x1_raw))
+    y1 = int(round(y1_raw))
 
     x0 = max(0, min(x0, img_w - 1))
     y0 = max(0, min(y0, img_h - 1))
@@ -194,7 +200,6 @@ def predict_mask_from_bbox(
     Run SAM2 with a box prompt and return a single binary mask (H, W).
     """
     predictor.set_image(image_rgb)
-
     box = np.array(bbox_xyxy_px, dtype=np.float32)
 
     # SAM2 predictor signature may accept either (4,) or (1,4) depending on version.
@@ -251,16 +256,15 @@ def infer_and_attach_masks(
     records: List[Dict[str, Any]],
     images_root: Path,
     predictor: SAM2ImagePredictor,
-    norm_size: int = NORM_SIZE_DEFAULT,
     overwrite_existing_mask: bool = False,
     recursive_search: bool = True,
     progress: bool = True,
 ) -> List[Dict[str, Any]]:
     """
     For each sample record:
-      - load image locally
+      - read image dimensions
       - for each instance with bbox, run SAM2
-      - save mask as COCO RLE in target.instances[].mask
+      - save mask as COCO RLE in sample.assets[].annotations[].mask
       - set metadata.mask_source = 'sam2_box_prompt_rle'
       - set dataset_info.info.has_semantic_masks = True
     """
@@ -274,7 +278,6 @@ def infer_and_attach_masks(
             info = rec.setdefault("info", {})
             if isinstance(info, dict):
                 info["has_semantic_masks"] = True
-                # keep bbox + point flags as-is
             out_records.append(rec)
             if progress:
                 print(f"[{idx}/{total}] dataset_info updated -> has_semantic_masks=True")
@@ -286,13 +289,16 @@ def infer_and_attach_masks(
                 print(f"[{idx}/{total}] skipped non-sample record_type={rec_type!r}")
             continue
 
-        sample_id = rec.get("sample_id", f"idx_{idx}")
-        instances = rec.get("target", {}).get("instances", [])
+        sample = rec.get("sample", {})
+        sample_id = sample.get("sample_id", rec.get("sample_id", f"idx_{idx}"))
+
+        assets = sample.get("assets", [])
+        first_asset = assets[0] if assets else {}
+        instances = first_asset.get("annotations", []) if isinstance(first_asset, dict) else []
         if not isinstance(instances, list):
             instances = []
 
         if not instances:
-            # no bbox, nothing to do
             rec.setdefault("metadata", {})
             rec["metadata"]["mask_source"] = rec.get("metadata", {}).get("mask_source")
             out_records.append(rec)
@@ -323,7 +329,7 @@ def infer_and_attach_masks(
                 continue
 
             try:
-                box_px = bbox_norm_to_pixel_xyxy(bbox, img_w=img_w, img_h=img_h, norm_size=norm_size)
+                box_px = bbox_to_pixel_xyxy(bbox, img_w=img_w, img_h=img_h)
                 mask_bool = predict_mask_from_bbox(
                     predictor=predictor,
                     image_rgb=image_rgb,
@@ -339,6 +345,7 @@ def infer_and_attach_masks(
                 rle = binary_mask_to_rle(mask_bool)
 
                 inst["mask"] = rle
+                inst["mask_format"] = "coco_rle"
                 # provenance / bookkeeping
                 inst["source"] = inst.get("source", "sam2_box_prompt_rle")
 
@@ -357,13 +364,9 @@ def infer_and_attach_masks(
                     f"[{idx}/{total}] sample {sample_id} instance {inst_idx}: SAM2 failed: {exc}"
                 )
 
-        metadata = rec.setdefault("metadata", {})
+        asset_metadata = first_asset.setdefault("metadata", {}) if isinstance(first_asset, dict) else {}
         if changed_any:
-            metadata["mask_source"] = "sam2_box_prompt_rle"
-            info = rec.get("info")
-            # leave as-is; dataset_info handles global flag
-        else:
-            metadata["mask_source"] = metadata.get("mask_source")
+            asset_metadata["mask_source"] = "sam2_box_prompt_rle"
 
         out_records.append(rec)
 
@@ -384,7 +387,6 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--sam2-config", type=Path, required=True, help="SAM2 config YAML, e.g. configs/sam2.1/sam2.1_hiera_l.yaml")
     p.add_argument("--sam2-checkpoint", type=Path, required=True, help="SAM2 checkpoint .pt")
     p.add_argument("--device", default="auto", choices=["auto", "cpu", "cuda"], help="Inference device")
-    p.add_argument("--norm-size", type=int, default=NORM_SIZE_DEFAULT, help="Normalization size used by bbox coordinates")
     p.add_argument("--overwrite-existing-mask", action="store_true", help="Overwrite non-null instance.mask")
     p.add_argument("--no-recursive-search", action="store_true", help="Disable basename recursive search under images-root")
     p.add_argument("--quiet", action="store_true", help="Reduce logging")
@@ -416,7 +418,6 @@ def main() -> None:
         records=records,
         images_root=args.images_root,
         predictor=predictor,
-        norm_size=args.norm_size,
         overwrite_existing_mask=args.overwrite_existing_mask,
         recursive_search=not args.no_recursive_search,
         progress=not args.quiet,

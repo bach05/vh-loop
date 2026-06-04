@@ -51,16 +51,31 @@ def read_jsonl(path: Path) -> List[Dict[str, Any]]:
 
 
 # -- Image lookup ------------------------------------------------------------
-def find_image(sample: Dict[str, Any], images_root: Path) -> Optional[Path]:
+def find_image(sample_record: Dict[str, Any], images_root: Path) -> Optional[Path]:
+    sample = sample_record.get("sample", sample_record)
+
+    raw = None
+    assets = sample.get("assets", [])
+    if assets and isinstance(assets, list):
+        asset = assets[0]
+        if isinstance(asset, dict):
+            raw = (
+                asset.get("uri")
+                or asset.get("metadata", {}).get("original_file_name")
+            )
+
     raw = (
-        sample.get("images", {}).get("query", {}).get("path")
+        raw
+        or sample.get("images", {}).get("query", {}).get("path")
         or sample.get("image_path")
         or sample.get("image")
         or sample.get("file_path")
         or sample.get("metadata", {}).get("original_file_name")
     )
+
     if not raw:
         return None
+
     p = Path(raw)
     for candidate in [
         p if p.is_absolute() else None,
@@ -69,7 +84,7 @@ def find_image(sample: Dict[str, Any], images_root: Path) -> Optional[Path]:
     ]:
         if candidate and candidate.exists():
             return candidate
-    # Recursive basename search
+
     matches = list(images_root.rglob(p.name))
     return matches[0] if matches else None
 
@@ -86,26 +101,25 @@ def overlay_masks(
     instances: List[Dict[str, Any]],
     alpha: float = 0.45,
 ) -> Tuple[Image.Image, List[str]]:
-    """
-    Overlay all instance masks on the image.
-    Returns the composited image and a list of debug messages.
-    """
     img_w, img_h = image.size
     base = image.convert("RGBA")
     debug_msgs = []
 
     for idx, inst in enumerate(instances):
-        label_id   = inst.get("label")
-        label_name = LABEL_MAP.get(label_id, f"unknown_{label_id}")
-        color      = LABEL_COLORS.get(label_name, DEFAULT_COLOR)
-        mask_data  = inst.get("mask")
+        label_name = inst.get("label_name")
+        if not label_name:
+            label_id = inst.get("label_id")
+            label_name = LABEL_MAP.get(label_id, f"unknown_{label_id}")
+
+        color = LABEL_COLORS.get(label_name, DEFAULT_COLOR)
+        mask_data = inst.get("mask")
 
         if mask_data is None:
             debug_msgs.append(f"  instance {idx} ({label_name}): NO MASK - skipped")
             continue
 
-        counts    = mask_data.get("counts")
-        rle_size  = mask_data.get("size") # [H, W] as saved by pycocotools
+        counts = mask_data.get("counts")
+        rle_size = mask_data.get("size")
 
         if not counts or not rle_size:
             debug_msgs.append(f"  instance {idx} ({label_name}): invalid RLE - skipped")
@@ -117,29 +131,27 @@ def overlay_masks(
             f"RLE size=[H={rle_h}, W={rle_w}], image size=(W={img_w}, H={img_h})"
         )
 
-        # Sanity check: RLE dimensions must match image
         if rle_h != img_h or rle_w != img_w:
             debug_msgs.append(
                 f"    DIMENSION MISMATCH: RLE({rle_h}×{rle_w}) != image({img_h}×{img_w})"
             )
 
-        binary = decode_coco_rle(counts, rle_size) # (H, W)
-        area   = int(binary.sum())
+        binary = decode_coco_rle(counts, rle_size)
+        area = int(binary.sum())
         debug_msgs.append(f"    mask area: {area} px  ({100*area/(img_h*img_w):.2f}% of image)")
 
         if area == 0:
             debug_msgs.append("    EMPTY MASK - zero foreground pixels")
             continue
 
-        # Build RGBA overlay layer
-        r, g, b   = color
+        r, g, b = color
         alpha_val = int(alpha * 255)
         rgba_mask = np.zeros((img_h, img_w, 4), dtype=np.uint8)
-        fg        = binary.astype(bool)
+        fg = binary.astype(bool)
         rgba_mask[fg] = [r, g, b, alpha_val]
 
         overlay = Image.fromarray(rgba_mask, mode="RGBA")
-        base    = Image.alpha_composite(base, overlay)
+        base = Image.alpha_composite(base, overlay)
 
     return base.convert("RGB"), debug_msgs
 
@@ -180,12 +192,19 @@ def main() -> None:
         if rec.get("record_type") != "sample":
             continue
 
-        instances = rec.get("target", {}).get("instances", [])
+        sample = rec.get("sample", {})
+        assets = sample.get("assets", [])
+        if not assets:
+            continue
+
+        asset = assets[0]
+        instances = asset.get("annotations", [])
+
         has_masks = any(inst.get("mask") is not None for inst in instances)
         if not has_masks:
             continue
 
-        sample_id  = rec.get("sample_id", "?")
+        sample_id = sample.get("sample_id", "?")
         image_path = find_image(rec, args.images_root)
 
         if image_path is None:
@@ -200,11 +219,15 @@ def main() -> None:
         for m in msgs:
             print(m)
 
-        # Draw legend with labels that have masks
-        labels = [
-            LABEL_MAP.get(inst.get("label"), "?")
-            for inst in instances if inst.get("mask") is not None
-        ]
+        labels = []
+        for inst in instances:
+            if inst.get("mask") is None:
+                continue
+            label_name = inst.get("label_name")
+            if not label_name:
+                label_name = LABEL_MAP.get(inst.get("label_id"), "?")
+            labels.append(label_name)
+
         composited = draw_legend(composited, list(dict.fromkeys(labels)))
 
         out_path = args.output_dir / f"sample_{sample_id}_{image_path.stem}_debug.png"
