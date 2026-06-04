@@ -1,6 +1,6 @@
 adapter: 'qwen3_5'
 params:
-  model_name_or_path: 'unsloth/Qwen3.5-4B'
+  model_name_or_path: 'unsloth/Qwen3.5-2B'
   model_params:
     max_seq_length: 4096
     load_in_4bit: false # MoE QLoRA not recommended, dense 27B is fine

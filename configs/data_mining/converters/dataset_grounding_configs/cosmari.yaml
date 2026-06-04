@@ -4,6 +4,9 @@ data_dicts:
   cosmari_train_s3000:
     folder_path: "images/default"
     labels: "/media/iaslab/data_bacchin/cosmari/cosmari_train_s3000/annotations/instances_default.json"
+  cosmari_test_s1000:
+    folder_path: "images/default"
+    labels: "/media/iaslab/data_bacchin/cosmari/cosmari_test_s1000/annotations/instances_default_rmap=man_cosmari.json"
 
 CLASSES:
     "plastic_packaging":
