@@ -6,8 +6,14 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from services import wait_for_port, start_label_studio, start_sam_backend
-from connection import make_client, load_label_config, get_or_create_project, connect_ml_backend, setup_local_storage
-from importer import read_samples, build_tasks, import_tasks
+from connection import (
+    make_client,
+    load_or_generate_config,
+    get_or_create_project,
+    connect_ml_backend,
+    setup_local_storage
+)
+from importer import read_samples, load_label_map_from_config, build_tasks, import_tasks
 
 
 def main() -> None:
@@ -16,7 +22,7 @@ def main() -> None:
     # Required
     parser.add_argument("--api-key", required=True)
     parser.add_argument("--project-title", required=True)
-    parser.add_argument("--label-config", type=Path, required=True)
+    parser.add_argument("--config-path", type=Path, required=True)
     parser.add_argument("--jsonl", type=Path, required=True)
     parser.add_argument("--images-root", type=Path, required=True)
     parser.add_argument(
@@ -72,7 +78,7 @@ def main() -> None:
     # ------------------------------------------------------------------ #
     print("STEP 2/5: creating the client and configuring the project...")
     client = make_client(args.api_key, args.ls_url)
-    config_xml = load_label_config(args.label_config)
+    config_xml = load_or_generate_config(config_path=args.config_path, jsonl_path=args.jsonl)
     project = get_or_create_project(
         client,
         title=args.project_title,
@@ -92,6 +98,8 @@ def main() -> None:
     # STEP 4 – Parse JSONL and import tasks #
     # ------------------------------------------------------------------ #
     print(f"STEP 4/5: reading JSONL from {args.jsonl}...")
+    label_map = load_label_map_from_config(args.config_path)
+    print(f"Loaded {len(label_map)} labels from config XML")
     samples, dataset_id = read_samples(args.jsonl)
     print(f"Samples read: {len(samples)}  |  dataset_id: {dataset_id}")
 
@@ -99,7 +107,7 @@ def main() -> None:
         print("Critical error: no samples extracted from the JSONL file. Exiting.")
         raise SystemExit(1)
 
-    tasks = build_tasks(samples, args.images_root)
+    tasks = build_tasks(samples, args.images_root, label_map)
     print(f"Valid tasks generated: {len(tasks)}")
 
     if not tasks:

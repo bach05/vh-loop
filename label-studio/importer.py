@@ -6,18 +6,32 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 from urllib.parse import quote
-from pycocotools import mask as coco_mask
+from xml.etree import ElementTree as ET
+
 import numpy as np
+from pycocotools import mask as coco_mask
 
 from label_studio_sdk import LabelStudio
 from label_studio_sdk.converter import brush
 
 
-LABEL_MAP: Dict[int, str] = {
-    1: "rotor",
-    2: "stator",
-    3: "shaft",
-}
+def load_label_map_from_config(config_path: Path) -> Dict[int, str]:
+    """ Reads XML config and extracts labels. """
+    tree = ET.parse(config_path)
+    root = tree.getroot()
+
+    labels: List[str] = []
+
+    for node in root.findall(".//KeyPointLabels/Label"):
+        label_name = node.attrib.get("value")
+
+        if label_name:
+            labels.append(label_name)
+
+    return {
+        i + 1: label
+        for i, label in enumerate(labels)
+    }
 
 
 def coco_rle_to_ls_rle(counts: str, size: list) -> list:
@@ -28,10 +42,7 @@ def coco_rle_to_ls_rle(counts: str, size: list) -> list:
 
 
 def read_samples(jsonl_path: Path) -> Tuple[List[Dict[str, Any]], str]:
-    """
-    Parses a JSONL file and returns (samples, dataset_id).
-    Uses utf-8-sig to handle Windows BOM characters.
-    """
+    """ Parses a JSONL file and returns (samples, dataset_id). Uses utf-8-sig to handle Windows BOM characters. """
     samples: List[Dict[str, Any]] = []
     dataset_id = "unknown"
 
@@ -42,8 +53,8 @@ def read_samples(jsonl_path: Path) -> Tuple[List[Dict[str, Any]], str]:
     print(f"Reading file: {jsonl_path.absolute()}")
     with open(jsonl_path, "r", encoding="utf-8-sig") as f:
         lines = f.readlines()
-
     print(f"Total lines found in file: {len(lines)}")
+
     for i, line in enumerate(lines):
         line = line.strip()
         if not line:
@@ -66,7 +77,12 @@ def read_samples(jsonl_path: Path) -> Tuple[List[Dict[str, Any]], str]:
     return samples, dataset_id
 
 
-def build_predictions(instances: List[Dict[str, Any]], img_w: int, img_h: int) -> List[Dict]:
+def build_predictions(
+    instances: List[Dict[str, Any]],
+    img_w: int,
+    img_h: int,
+    label_map: Dict[int, str],
+) -> List[Dict]:
     """ Converts JSONL target instances into Label Studio prediction results. """
     results = []
     for inst in instances:
@@ -74,7 +90,7 @@ def build_predictions(instances: List[Dict[str, Any]], img_w: int, img_h: int) -
 
         if not label_name:
             label_id = inst.get("label_id")
-            label_name = LABEL_MAP.get(label_id)
+            label_name = label_map.get(label_id)
 
         if not label_name:
             print(f"WARNING: missing label")
@@ -114,7 +130,7 @@ def build_predictions(instances: List[Dict[str, Any]], img_w: int, img_h: int) -
     return results
 
 
-def build_tasks(samples: List[Dict[str, Any]], storage_path: Path) -> List[Dict]:
+def build_tasks(samples: List[Dict[str, Any]], storage_path: Path, label_map: Dict[int, str]) -> List[Dict]:
     """ Converts raw JSONL samples into Label Studio task dicts. """
     tasks = []
     for i, s in enumerate(samples):
@@ -150,16 +166,15 @@ def build_tasks(samples: List[Dict[str, Any]], storage_path: Path) -> List[Dict]
 
         image_url = f"/data/local-files/?d={quote(rel_path)}"
         img_size = asset.get("size", [0, 0])
-
         img_w = img_size[0]
         img_h = img_size[1]
 
         annotations = asset.get("annotations", [])
-
         prediction_results = build_predictions(
             annotations,
             img_w,
             img_h,
+            label_map
         )
 
         task: Dict[str, Any] = {
@@ -200,10 +215,14 @@ if __name__ == "__main__":
     parser.add_argument("--project-id", type=int, required=True)
     parser.add_argument("--jsonl", type=Path, required=True)
     parser.add_argument("--storage-path", type=Path, required=True)
+    parser.add_argument("--label-config", type=Path, required=True)
     parser.add_argument("--ls-url", default="http://localhost:8080")
     args = parser.parse_args()
 
     client = make_client(args.api_key, args.ls_url)
+
+    label_map = load_label_map_from_config(args.label_config)
+    print(f"Loaded {len(label_map)} labels from XML config")
 
     samples, dataset_id = read_samples(args.jsonl)
     print(f"Read {len(samples)} samples  |  dataset_id: {dataset_id}")
@@ -212,11 +231,15 @@ if __name__ == "__main__":
         print("Critical error: no samples extracted from JSONL file.")
         raise SystemExit(1)
 
-    tasks = build_tasks(samples, args.storage_path)
+    tasks = build_tasks(
+        samples=samples,
+        storage_path=args.storage_path,
+        label_map=label_map,
+    )
     print(f"Valid tasks generated: {len(tasks)}")
 
     if not tasks:
-        print("No valid tasks generated (check previous warning logs).")
+        print("No valid tasks generated...")
         raise SystemExit(1)
 
     import_tasks(client, args.project_id, tasks)
