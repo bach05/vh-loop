@@ -1,0 +1,21 @@
+dataset: CocoWasteDataset
+
+data_dicts:
+  paniz_train_04_02_single:
+    folder_path: ""
+    labels: "/media/iaslab/data_bacchin/panizzolo/paniz_train_04_02_SINGLE.json"
+
+CLASSES:
+    "motor_scrap":
+     - "Whole or broken electric motor rotors, stators, armatures or motor-core fragments, including attached shafts, laminated steel/iron cores, copper windings, insulation, resin, rust, dirt or burnt residues. These objects are usually compact cylindrical or ring-shaped components. "
+    "long_scrap":
+     - "Standalone elongated metal pieces, usually cylindrical or bar-like, such as shafts, rods, bolts, tubes, pipes or beams. These are often made of steel or iron and have a length clearly larger than their width. Excluding shafts still attached to a motor rotor or armature and short bolts, nuts, washers or generic metal fragments."
+    "copper":
+        - "Loose or detached copper-colored wire, winding, cable or wire bundles clearly separated from motors or electrical components."
+    "residual":
+        - "Non-metallic contaminants such as plastic, rubber, wood, cardboard, textile, insulation fragments, tape or other non-target residues. Ignore dirt, rust and dust on the conveyor belt or attached to metal pieces."
+
+VISUALIZE: true
+
+GLOBAL_ROOT: "/media/iaslab/data_bacchin/panizzolo"
+#GLOBAL_ROOT: "/mnt/Autolabelling_env/datasets/coco_cosmari_s3000"
