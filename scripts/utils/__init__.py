@@ -13,6 +13,7 @@ from .io import (
     resolve_image_path,
     load_canonical_samples,
     resolve_prediction_files,
+    load_and_stack_csvs,
     write_csv,
 )
 

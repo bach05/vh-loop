@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import csv
 import json
+import pandas as pd
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, Iterable
 
 from hydra.utils import to_absolute_path
 from omegaconf import DictConfig
@@ -154,8 +155,46 @@ def resolve_prediction_files(cfg: DictConfig) -> list[tuple[str, Path]]:
 
 
 # ---------------------------------------------------------------------------
-# CSV writing
+# CSV handling
 # ---------------------------------------------------------------------------
+
+def load_and_stack_csvs(paths: Iterable[str | Path]) -> pd.DataFrame:
+    frames: list[pd.DataFrame] = []
+
+    for path in paths:
+        path = Path(path)
+        if not path.exists():
+            raise FileNotFoundError(f"Input CSV not found: {path}")
+
+        df = pd.read_csv(path)
+        df["_source_file"] = str(path)
+        frames.append(df)
+
+    if not frames:
+        raise ValueError("No input CSV files were provided.")
+
+    merged = pd.concat(frames, axis=0, ignore_index=True)
+
+    required = {"model", "threshold"}
+    missing = required - set(merged.columns)
+    if missing:
+        raise ValueError(
+            f"Merged CSV is missing required columns: {sorted(missing)}. "
+            f"Available columns: {list(merged.columns)}"
+        )
+
+    merged["model"] = merged["model"].astype(str)
+    merged["threshold"] = pd.to_numeric(merged["threshold"], errors="coerce")
+
+    if merged["threshold"].isna().any():
+        bad_rows = merged[merged["threshold"].isna()]
+        raise ValueError(
+            "Some rows have invalid threshold values:\n"
+            f"{bad_rows[['model', 'threshold', '_source_file']].head()}"
+        )
+
+    return merged
+
 
 def write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
     """ Write *rows* as a CSV to *path*, creating parent directories as needed. """

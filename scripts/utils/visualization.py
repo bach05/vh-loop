@@ -1,14 +1,15 @@
 from __future__ import annotations
 
 import logging
+from tqdm import tqdm
+from PIL import Image
 from pathlib import Path
 from typing import Any, Optional
 
+import pandas as pd
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from PIL import Image
-from tqdm import tqdm
 
 from scripts.data.canonical_schema.sample.base import DataSample
 from scripts.utils.bbox import bbox_xyxy, match_boxes
@@ -154,26 +155,40 @@ def render_sample_grid(
 # Aggregate plots
 # ---------------------------------------------------------------------------
 
+def _to_dataframe(data: pd.DataFrame | list[dict[str, Any]]) -> pd.DataFrame:
+    if isinstance(data, pd.DataFrame):
+        return data.copy()
+    return pd.DataFrame(data)
+
+
 def plot_metric_by_threshold(
-    rows: list[dict[str, Any]],
+    data: pd.DataFrame | list[dict[str, Any]],
     *,
     metric: str,
     out_path: Path,
 ) -> None:
     """ Line plot of *metric* vs IoU threshold, one line per model. """
-    models = sorted({r["model"] for r in rows})
+    df = _to_dataframe(data)
+    if df.empty or metric not in df.columns or "model" not in df.columns or "threshold" not in df.columns:
+        return
 
+    plot_df = df.copy()
+    plot_df["threshold"] = pd.to_numeric(plot_df["threshold"], errors="coerce")
+    plot_df[metric] = pd.to_numeric(plot_df[metric], errors="coerce")
+    plot_df = plot_df.dropna(subset=["model", "threshold", metric])
+    if plot_df.empty:
+        return
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
     plt.figure(figsize=(10, 6))
-    for model in tqdm(models, desc=f"Plotting {metric}", total=len(models)):
-        model_rows = sorted(
-            [r for r in rows if r["model"] == model],
-            key=lambda r: r["threshold"],
-        )
+
+    for model_name, group in sorted(plot_df.groupby("model"), key=lambda x: str(x[0])):
+        group = group.sort_values("threshold", kind="mergesort")
         plt.plot(
-            [r["threshold"] for r in model_rows],
-            [r[metric] for r in model_rows],
+            group["threshold"].to_numpy(),
+            group[metric].to_numpy(),
             marker="o",
-            label=model,
+            label=str(model_name),
         )
 
     plt.xlabel("IoU threshold")
@@ -182,27 +197,45 @@ def plot_metric_by_threshold(
     plt.grid(True, alpha=0.3)
     plt.legend()
     plt.tight_layout()
-    out_path.parent.mkdir(parents=True, exist_ok=True)
     plt.savefig(out_path, dpi=200)
     plt.close()
 
 
 def plot_summary_bar(
-    summary_rows: list[dict[str, Any]],
+    data: pd.DataFrame | list[dict[str, Any]],
     *,
-    metric: str,
+    metric: str | None = None,
+    value_col: str | None = None,
     out_path: Path,
 ) -> None:
-    """ Bar chart of a single scalar *metric* across all models. """
-    models = [r["model"] for r in summary_rows]
-    values = [r[metric] for r in summary_rows]
+    """
+    Bar chart of a single scalar metric across all models.
+    Preserves input order of rows/models.
+    """
+    col = metric if metric is not None else value_col
+    if col is None:
+        raise ValueError("plot_summary_bar requires either metric= or value_col=")
+    if metric is not None and value_col is not None and metric != value_col:
+        raise ValueError("metric and value_col refer to different columns")
+
+    df = _to_dataframe(data)
+    if df.empty or "model" not in df.columns or col not in df.columns:
+        return
+
+    plot_df = df.copy()
+    plot_df[col] = pd.to_numeric(plot_df[col], errors="coerce")
+    plot_df = plot_df.dropna(subset=["model", col])
+
+    if plot_df.empty:
+        return
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
 
     plt.figure(figsize=(10, 6))
-    plt.bar(models, values)
-    plt.ylabel(metric)
-    plt.title(metric)
+    plt.bar(plot_df["model"].astype(str).to_list(), plot_df[col].to_list())
+    plt.ylabel(col)
+    plt.title(col)
     plt.xticks(rotation=30, ha="right")
     plt.tight_layout()
-    out_path.parent.mkdir(parents=True, exist_ok=True)
     plt.savefig(out_path, dpi=200)
     plt.close()

@@ -31,10 +31,15 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
-from typing import Iterable
 
 import matplotlib.pyplot as plt
 import pandas as pd
+
+from scripts.utils import (
+    load_and_stack_csvs,
+    plot_metric_by_threshold,
+    plot_summary_bar
+)
 
 
 DEFAULT_METRICS = [
@@ -45,83 +50,6 @@ DEFAULT_METRICS = [
     "miou_gt_penalized",
     "mean_iou_positive_matches",
 ]
-
-
-def load_and_stack_csvs(paths: Iterable[str | Path]) -> pd.DataFrame:
-    frames: list[pd.DataFrame] = []
-
-    for path in paths:
-        path = Path(path)
-        if not path.exists():
-            raise FileNotFoundError(f"Input CSV not found: {path}")
-
-        df = pd.read_csv(path)
-        df["_source_file"] = str(path)
-        frames.append(df)
-
-    if not frames:
-        raise ValueError("No input CSV files were provided.")
-
-    merged = pd.concat(frames, axis=0, ignore_index=True)
-
-    required = {"model", "threshold"}
-    missing = required - set(merged.columns)
-    if missing:
-        raise ValueError(
-            f"Merged CSV is missing required columns: {sorted(missing)}. "
-            f"Available columns: {list(merged.columns)}"
-        )
-
-    merged["model"] = merged["model"].astype(str)
-    merged["threshold"] = pd.to_numeric(merged["threshold"], errors="coerce")
-
-    if merged["threshold"].isna().any():
-        bad_rows = merged[merged["threshold"].isna()]
-        raise ValueError(
-            "Some rows have invalid threshold values:\n"
-            f"{bad_rows[['model', 'threshold', '_source_file']].head()}"
-        )
-
-    return merged
-
-
-def plot_metric_by_threshold(
-    df: pd.DataFrame,
-    *,
-    metric: str,
-    out_path: Path,
-) -> None:
-    if metric not in df.columns:
-        return
-
-    plot_df = df.copy()
-    plot_df[metric] = pd.to_numeric(plot_df[metric], errors="coerce")
-    plot_df = plot_df.dropna(subset=["threshold", metric])
-
-    if plot_df.empty:
-        return
-
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-
-    plt.figure(figsize=(10, 6))
-
-    for model_name, group in sorted(plot_df.groupby("model"), key=lambda x: x[0]):
-        group = group.sort_values("threshold")
-        plt.plot(
-            group["threshold"].to_numpy(),
-            group[metric].to_numpy(),
-            marker="o",
-            label=model_name,
-        )
-
-    plt.xlabel("IoU threshold")
-    plt.ylabel(metric)
-    plt.title(f"{metric} by IoU threshold")
-    plt.grid(True, alpha=0.3)
-    plt.legend()
-    plt.tight_layout()
-    plt.savefig(out_path, dpi=200)
-    plt.close()
 
 
 def compute_best_summary(df: pd.DataFrame) -> pd.DataFrame:
@@ -168,34 +96,6 @@ def compute_best_summary(df: pd.DataFrame) -> pd.DataFrame:
         rows.append(row)
 
     return pd.DataFrame(rows)
-
-
-def plot_summary_bar(
-    summary_df: pd.DataFrame,
-    *,
-    value_col: str,
-    out_path: Path,
-) -> None:
-    if value_col not in summary_df.columns:
-        return
-
-    plot_df = summary_df.copy()
-    plot_df[value_col] = pd.to_numeric(plot_df[value_col], errors="coerce")
-    plot_df = plot_df.dropna(subset=[value_col])
-
-    if plot_df.empty:
-        return
-
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-
-    plt.figure(figsize=(10, 6))
-    plt.bar(plot_df["model"], plot_df[value_col])
-    plt.ylabel(value_col)
-    plt.title(value_col)
-    plt.xticks(rotation=30, ha="right")
-    plt.tight_layout()
-    plt.savefig(out_path, dpi=200)
-    plt.close()
 
 
 def main() -> None:
