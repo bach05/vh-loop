@@ -122,20 +122,10 @@ def bbox_to_pixel_xyxy(bbox: Dict[str, Any], img_w: int, img_h: int) -> Tuple[in
     tl = bbox.get("tl", {})
     br = bbox.get("br", {})
 
-    x0_raw = float(tl["x"])
-    y0_raw = float(tl["y"])
-    x1_raw = float(br["x"])
-    y1_raw = float(br["y"])
-
-    x0 = int(round(x0_raw))
-    y0 = int(round(y0_raw))
-    x1 = int(round(x1_raw))
-    y1 = int(round(y1_raw))
-
-    x0 = max(0, min(x0, img_w - 1))
-    y0 = max(0, min(y0, img_h - 1))
-    x1 = max(0, min(x1, img_w))
-    y1 = max(0, min(y1, img_h))
+    x0 = max(0, min(round(float(tl["x"])), img_w - 1))
+    y0 = max(0, min(round(float(tl["y"])), img_h - 1))
+    x1 = max(0, min(round(float(br["x"])), img_w))
+    y1 = max(0, min(round(float(br["y"])), img_h))
 
     if x1 <= x0:
         x1 = min(img_w, x0 + 1)
