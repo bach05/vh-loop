@@ -4,8 +4,11 @@
 import os
 import socket
 import subprocess
+import shlex
+import shutil
 import time
 from pathlib import Path
+from typing import Sequence
 
 
 def wait_for_port(host: str, port: int, timeout_s: int = 180) -> None:
@@ -20,6 +23,43 @@ def wait_for_port(host: str, port: int, timeout_s: int = 180) -> None:
     raise TimeoutError(f"{host}:{port} not reachable after {timeout_s}s")
 
 
+def _is_windows() -> bool:
+    return os.name == "nt"
+
+
+def _env_exec_path(conda_root: Path, conda_env: str, exe_name: str) -> Path:
+    """
+    Return the executable path inside a conda environment.
+
+    Windows: <conda_root>/envs/<env>/Scripts/<exe_name>.exe
+    POSIX:   <conda_root>/envs/<env>/bin/<exe_name>
+    """
+    env_dir = conda_root / "envs" / conda_env
+    if _is_windows():
+        return env_dir / "Scripts" / f"{exe_name}.exe"
+    return env_dir / "bin" / exe_name
+
+
+def _popen_kwargs() -> dict:
+    """Cross-platform process launch options."""
+    if _is_windows():
+        return {"creationflags": getattr(subprocess, "CREATE_NEW_CONSOLE", 0)}
+    return {"start_new_session": True}
+
+
+def _launch_process(
+    cmd: Sequence[str],
+    cwd: Path | None = None,
+    env: dict[str, str] | None = None,
+) -> subprocess.Popen:
+    kwargs = _popen_kwargs()
+    if cwd is not None:
+        kwargs["cwd"] = str(cwd)
+    if env is not None:
+        kwargs["env"] = env
+    return subprocess.Popen(list(cmd), **kwargs)
+
+
 def start_label_studio(
     conda_root: Path,
     conda_env: str,
@@ -27,51 +67,95 @@ def start_label_studio(
     port: int = 8080,
 ) -> None:
     """Launches Label Studio in a new console window and waits for it to be ready."""
-    env_dir = conda_root / "envs" / conda_env
-    ls_exe = env_dir / "Scripts" / "label-studio.exe"
+    ls_exe = _env_exec_path(conda_root, conda_env, "label-studio")
+    if not ls_exe.exists():
+        raise FileNotFoundError(f"Not found: {ls_exe}")
 
-    os.environ["LABEL_STUDIO_LOCAL_FILES_SERVING_ENABLED"] = "true"
-    os.environ["LABEL_STUDIO_LOCAL_FILES_DOCUMENT_ROOT"] = str(images_root.resolve())
-    os.environ["LABEL_STUDIO_CORS_ALLOWED_ORIGINS"] = "*"
+    env = os.environ.copy()
+    env["LABEL_STUDIO_LOCAL_FILES_SERVING_ENABLED"] = "true"
+    env["LABEL_STUDIO_LOCAL_FILES_DOCUMENT_ROOT"] = str(images_root.resolve())
+    env["LABEL_STUDIO_CORS_ALLOWED_ORIGINS"] = "*"
 
-    subprocess.Popen([str(ls_exe), "start"], creationflags=getattr(subprocess, "CREATE_NEW_CONSOLE", 0))
+    _launch_process([str(ls_exe), "start"], env=env)
     print(f"Waiting for Label Studio to open on port {port}...")
     wait_for_port("127.0.0.1", port)
 
-    print("Port opened. Wait some extra time for Django to start database...")
+    print("Port opened. Waiting for Django/database startup...")
     time.sleep(10)
 
-'''
+
+def _spawn_in_terminal(
+    cmd: list[str],
+    cwd: Path,
+    env: dict,
+) -> subprocess.Popen | None:
+    """ Open cmd in a new, visible terminal window. Returns the Popen handle
+    when the process is the backend itself (Windows), else None. """
+
+    if os.name == "nt":
+        return subprocess.Popen(
+            cmd,
+            cwd=str(cwd),
+            env=env,
+            creationflags=subprocess.CREATE_NEW_CONSOLE,
+        )
+
+    # Linux – try common terminal emulators in preference order
+    shell_cmd = " ".join(shlex.quote(c) for c in cmd)
+    cd_and_run = f"cd {shlex.quote(str(cwd))} && {shell_cmd}"
+
+    _TERMINALS = {
+        "gnome-terminal": ["--", "bash", "-c"],
+        "konsole":        ["-e", "bash", "-c"],
+        "xfce4-terminal": ["-e", "bash", "-c"],
+        "xterm":          ["-e", "bash", "-c"],
+    }
+    for binary, flags in _TERMINALS.items():
+        if shutil.which(binary):
+            subprocess.Popen(
+                [binary, *flags, cd_and_run],
+                start_new_session=True,
+            )
+            return None
+
+    raise RuntimeError(
+        "No supported terminal emulator found on PATH "
+        f"(tried: {', '.join(_TERMINALS)})"
+    )
+
+
 def start_sam_backend(
     conda_root: Path,
     conda_env: str,
     backend_dir: Path,
     port: int = 9090,
+    backend_module: str = "./segment_anything_2_image",
 ) -> None:
-    """Launches the SAM2 ML backend in a new console window and waits for it to be ready."""
+    """ Start SAM2 ML backend cross-platform. """
     env_dir = conda_root / "envs" / conda_env
-    ml_exe = env_dir / "Scripts" / "label-studio-ml.exe"
+    backend_dir = backend_dir.resolve()
+
+    ml_exe = (
+        env_dir / "Scripts" / "label-studio-ml.exe"
+        if os.name == "nt"
+        else env_dir / "bin" / "label-studio-ml"
+    )
 
     if not ml_exe.exists():
         raise FileNotFoundError(f"Not found: {ml_exe}")
 
-    print(f"Starting SAM2 Backend on port {port}...")
-    subprocess.Popen(
-        [str(ml_exe), "start", "./segment_anything_2_image", "-p", str(port)],
-        cwd=str(backend_dir),
-        creationflags=getattr(subprocess, "CREATE_NEW_CONSOLE", 0),
-    )
-    wait_for_port("127.0.0.1", port, timeout_s=180)
-'''
+    env = os.environ.copy()
+    env["PATH"] = str(ml_exe.parent) + os.pathsep + env.get("PATH", "")
 
-def start_sam_backend(bat_path: Path, port: int = 9090) -> None:
-    if not bat_path.exists():
-        raise FileNotFoundError(f"Bat not found: {bat_path}")
+    cmd = [str(ml_exe), "start", backend_module, "-p", str(port)]
+    proc = _spawn_in_terminal(cmd, cwd=backend_dir, env=env)
+    time.sleep(3)
 
-    subprocess.Popen(
-        ["cmd.exe", "/c", str(bat_path)],
-        creationflags=getattr(subprocess, "CREATE_NEW_CONSOLE", 0),
-    )
+    if proc is not None and proc.poll() is not None:
+        raise RuntimeError(
+            f"SAM backend exited immediately with code {proc.returncode}"
+        )
+
     wait_for_port("127.0.0.1", port, timeout_s=180)
 
 
@@ -87,15 +171,23 @@ if __name__ == "__main__":
     parser.add_argument("--conda-root", type=Path, default=Path.home() / "mambaforge")
     parser.add_argument("--ls-conda-env", default="ls-ui")
     parser.add_argument("--ls-port", type=int, default=8080)
+
     parser.add_argument("--start-sam", action="store_true", help="Also start SAM2 backend")
-    # parser.add_argument("--sam-conda-env", default="ls-sam2")
-    # parser.add_argument(
-    #     "--sam-backend-dir",
-    #     type=Path,
-    #     default=Path(r"C:\\ITR\\label-studio-ml-backend\\label_studio_ml\\examples"),
-    # )
+    parser.add_argument("--sam-conda-env", default="ls-sam2")
+    parser.add_argument(
+        "--sam-backend-dir",
+        type=Path,
+        default=Path(r"C:\ITR\label-studio-ml-backend\label_studio_ml\examples")
+        if _is_windows()
+        else Path.home(),
+    )
     parser.add_argument("--sam-port", type=int, default=9090)
-    parser.add_argument("--sam-bat", type=Path, default=Path(r"C:\\ITR\\vh-loop\\label-studio\\LS-ML.bat"))
+    parser.add_argument(
+        "--sam-module",
+        default="./segment_anything_2_image",
+        help="Backend module/path passed to label-studio-ml start",
+    )
+
     args = parser.parse_args()
 
     print("Starting Label Studio...")
@@ -104,6 +196,11 @@ if __name__ == "__main__":
 
     if args.start_sam:
         print("Starting SAM2 backend...")
-        # start_sam_backend(args.conda_root, args.sam_conda_env, args.sam_backend_dir, args.sam_port)
-        start_sam_backend(args.sam_bat, args.sam_port)
+        start_sam_backend(
+            args.conda_root,
+            args.sam_conda_env,
+            args.sam_backend_dir,
+            args.sam_port,
+            args.sam_module,
+        )
         print("SAM2 backend started.")

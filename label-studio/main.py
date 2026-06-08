@@ -50,11 +50,17 @@ def main() -> None:
         action="store_true",
         help="Start and register the SAM2 ML backend",
     )
+    parser.add_argument("--sam-conda-env", default="ls-sam2")
+    parser.add_argument(
+        "--sam-backend-dir",
+        type=Path,
+        default=Path(r"C:\ITR\label-studio-ml-backend\label_studio_ml\examples"),
+    )
     parser.add_argument("--sam-port", type=int, default=9090)
     parser.add_argument(
-        "--sam-bat",
-        type=Path,
-        default=Path(r"C:\ITR\vh-loop\label-studio\LS-ML.bat"),
+        "--sam-module",
+        default="./segment_anything_2_image",
+        help="Backend module/path passed to label-studio-ml start",
     )
 
     args = parser.parse_args()
@@ -122,7 +128,13 @@ def main() -> None:
     # ------------------------------------------------------------------ #
     if args.connect_sam_backend:
         print("STEP 5/5: starting and connecting SAM2 backend...")
-        start_sam_backend(args.sam_bat, args.sam_port)
+        start_sam_backend(
+            args.conda_root,
+            args.sam_conda_env,
+            args.sam_backend_dir,
+            args.sam_port,
+            args.sam_module,
+        )
         connect_ml_backend(
             client,
             project_id=project.id,
