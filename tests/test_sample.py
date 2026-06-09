@@ -26,6 +26,8 @@ from hydra.core.hydra_config import HydraConfig
 from omegaconf import DictConfig, OmegaConf
 from tqdm import tqdm
 
+from scripts.utils import get_primary_image_asset
+
 from scripts.core.constants import running_env
 from scripts.core.factories import DatasetBuildError, build_transform
 from scripts.core.registry import get_model_adapter
@@ -34,7 +36,6 @@ from scripts.data.canonical_schema.annotations import InstanceAnnotation
 from scripts.data.canonical_schema.dataset_header import AnnotationInfo, DatasetInfo
 from scripts.data.canonical_schema.records import DataRecord, DatasetInfoRecord
 
-import scripts.models #register the adapters
 from scripts.core import registry
 print("registered adapters:", list(registry._MODEL_ADAPTERS.keys()))
 
@@ -129,16 +130,6 @@ def label_name_to_id_map(dataset_info: DatasetInfo) -> dict[str, int]:
         label_name: int(info.label_id)
         for label_name, info in dataset_info.label_info.items()
     }
-
-
-def first_image_asset(sample):
-    """Return the first image asset from a v2 DataSample."""
-
-    assets = getattr(sample, "assets", None)
-    if not assets:
-        raise ValueError(f"Sample {getattr(sample, 'sample_id', '<unknown>')} has no assets.")
-
-    return assets[0]
 
 
 def parse_generated_output(
@@ -395,7 +386,7 @@ def main(cfg: DictConfig) -> None:
                 total_samples += 1
 
                 try:
-                    image_asset = first_image_asset(original_sample)
+                    image_asset = get_primary_image_asset(original_sample)
                     img_size = image_asset.size  # (width, height)
 
                     predicted_annotations, parse_debug = parse_generated_output(
