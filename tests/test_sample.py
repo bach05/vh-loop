@@ -26,7 +26,11 @@ from hydra.core.hydra_config import HydraConfig
 from omegaconf import DictConfig, OmegaConf
 from tqdm import tqdm
 
-from scripts.utils import get_primary_image_asset
+from scripts.utils import (
+    get_primary_image_asset,
+    get_dataset_info,
+    label_name_to_id_map
+)
 
 from scripts.core.constants import running_env
 from scripts.core.factories import DatasetBuildError, build_transform
@@ -109,27 +113,6 @@ def reconstruct_checkpoint_path(cfg: DictConfig) -> str:
     latest_checkpoint = checkpoint_paths[-1]
     logging.info("Using checkpoint: %s", latest_checkpoint)
     return str(latest_checkpoint)
-
-
-def get_dataset_info(canonical_dataset: CanonicalDataset) -> DatasetInfo:
-    """Return DatasetInfo from CanonicalDataset with compatibility fallbacks."""
-
-    if hasattr(canonical_dataset, "get_dataset_info"):
-        return canonical_dataset.get_dataset_info()
-
-    if getattr(canonical_dataset, "info", None) is not None:
-        return canonical_dataset.info
-
-    raise RuntimeError("Canonical dataset has no DatasetInfo.")
-
-
-def label_name_to_id_map(dataset_info: DatasetInfo) -> dict[str, int]:
-    """Build {label_name: label_id} from DatasetInfo.label_info."""
-
-    return {
-        label_name: int(info.label_id)
-        for label_name, info in dataset_info.label_info.items()
-    }
 
 
 def parse_generated_output(

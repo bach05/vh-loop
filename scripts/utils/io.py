@@ -4,57 +4,13 @@ import csv
 import json
 import pandas as pd
 from pathlib import Path
-from typing import Any, Optional, Iterable
+from typing import Any, Iterable
 
 from hydra.utils import to_absolute_path
 from omegaconf import DictConfig
 
-from scripts.data.canonical_schema import DatasetInfo, DatasetInfoRecord, DataRecord, InstanceAnnotation
-from scripts.data.canonical_schema.assets import ImageAsset
+from scripts.data.canonical_schema import DatasetInfo, DatasetInfoRecord, DataRecord
 from scripts.data.canonical_schema.sample.base import DataSample
-
-
-# ---------------------------------------------------------------------------
-# Schema asset helpers
-# ---------------------------------------------------------------------------
-
-def get_image_assets(sample: Optional[DataSample]) -> list[ImageAsset]:
-    """ Return all ImageAsset objects from *sample*, or an empty list. """
-    if sample is None:
-        return []
-    assets = getattr(sample, "assets", None)
-    if not assets:
-        return []
-    return [a for a in assets if isinstance(a, ImageAsset)]
-
-
-def get_primary_image_asset(sample: Optional[DataSample]) -> Optional[ImageAsset]:
-    """ Return the first ImageAsset from *sample*, or None. """
-    assets = get_image_assets(sample)
-    return assets[0] if assets else None
-
-
-def extract_bbox_annotations(sample: Optional[DataSample]) -> list[InstanceAnnotation]:
-    """ Return every InstanceAnnotation that has a bounding-box across all image assets. """
-    if sample is None:
-        return []
-    return [
-        ann
-        for asset in get_image_assets(sample)
-        for ann in asset.annotations
-        if ann.bbox is not None
-    ]
-
-
-def resolve_image_path(sample: DataSample, image_root: Optional[str | Path]) -> Optional[Path]:
-    """ Resolve the filesystem path to the primary image of *sample*. """
-    asset = get_primary_image_asset(sample)
-    if asset is None:
-        return None
-    resolved = asset.resolve_path(
-        to_absolute_path(str(image_root)) if image_root is not None else None
-    )
-    return Path(resolved)
 
 
 # ---------------------------------------------------------------------------

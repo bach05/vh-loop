@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from tqdm import tqdm
 from PIL import Image
 from pathlib import Path
 from typing import Any, Optional
@@ -12,8 +11,12 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 from scripts.data.canonical_schema.sample.base import DataSample
-from scripts.utils.bbox import bbox_xyxy, match_boxes
-from scripts.utils.io import extract_bbox_annotations, resolve_image_path
+from scripts.utils import (
+    bbox_xyxy,
+    match_boxes,
+    extract_bbox_annotations,
+    resolve_image_path
+)
 
 
 # ---------------------------------------------------------------------------
