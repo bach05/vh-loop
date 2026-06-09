@@ -64,13 +64,7 @@ def _candidate_paths(raw_path: str, images_root: Path) -> List[Path]:
 
 
 def find_image_path(sample_record: Dict[str, Any], images_root: Path, recursive_search: bool = True) -> Path:
-    """
-    Resolve the local image path using JSONL sample.
-    Priority:
-      1) sample.assets[].uri
-      2) sample.assets[].metadata.original_file_name
-      3) basename search under images_root
-    """
+    """ Resolve the local image path using JSONL sample. """
     sample = sample_record.get("sample", sample_record)
     raw_path = None
 
@@ -78,17 +72,7 @@ def find_image_path(sample_record: Dict[str, Any], images_root: Path, recursive_
     if assets and isinstance(assets, list):
         first_asset = assets[0]
         if isinstance(first_asset, dict):
-            raw_path = (
-                    first_asset.get("uri")
-                    or first_asset.get("metadata", {}).get("original_file_name")
-            )
-
-    raw_path = (
-            raw_path
-            or sample.get("images", {}).get("query", {}).get("path")
-            or sample.get("image")
-            or sample.get("metadata", {}).get("original_file_name")
-    )
+            raw_path = first_asset.get("uri")
 
     if not raw_path:
         raise FileNotFoundError(f"Sample {sample.get('sample_id')} has no image path field.")

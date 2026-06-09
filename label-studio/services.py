@@ -73,7 +73,7 @@ def start_label_studio(
 
     env = os.environ.copy()
     env["LABEL_STUDIO_LOCAL_FILES_SERVING_ENABLED"] = "true"
-    env["LABEL_STUDIO_LOCAL_FILES_DOCUMENT_ROOT"] = str(images_root.resolve())
+    env["LABEL_STUDIO_LOCAL_FILES_DOCUMENT_ROOT"] = images_root.resolve().as_posix()
     env["LABEL_STUDIO_CORS_ALLOWED_ORIGINS"] = "*"
 
     _launch_process([str(ls_exe), "start"], env=env)
@@ -146,8 +146,10 @@ def start_sam_backend(
     backend_dir: Path,
     port: int = 9090,
     backend_module: str = "./segment_anything_2_image",
+    label_studio_url: str = "http://127.0.0.1:8080",
+    label_studio_api_key: str | None = None,
 ) -> None:
-    """ Start SAM2 ML backend cross-platform. """
+    """Start SAM2 ML backend cross-platform."""
     env_dir = conda_root / "envs" / conda_env
     backend_dir = backend_dir.resolve()
 
@@ -164,8 +166,13 @@ def start_sam_backend(
     if not ml_exe.exists():
         raise FileNotFoundError(f"Not found: {ml_exe}")
 
+    if not label_studio_api_key:
+        raise ValueError("LABEL_STUDIO_API_KEY is required for the SAM backend")
+
     env = os.environ.copy()
     env["PATH"] = str(ml_exe.parent) + os.pathsep + env.get("PATH", "")
+    env["LABEL_STUDIO_URL"] = label_studio_url
+    env["LABEL_STUDIO_API_KEY"] = label_studio_api_key
 
     cmd = [str(ml_exe), "start", backend_module, "-p", str(port)]
 
@@ -173,9 +180,7 @@ def start_sam_backend(
     time.sleep(3)
 
     if proc is not None and proc.poll() is not None:
-        raise RuntimeError(
-            f"SAM backend exited immediately with code {proc.returncode}"
-        )
+        raise RuntimeError(f"SAM backend exited immediately with code {proc.returncode}")
 
     wait_for_port("127.0.0.1", port, timeout_s=180)
 

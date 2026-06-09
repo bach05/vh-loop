@@ -134,6 +134,8 @@ def main() -> None:
             args.sam_backend_dir,
             args.sam_port,
             args.sam_module,
+            args.ls_url,
+            args.api_key
         )
         connect_ml_backend(
             client,
