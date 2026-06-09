@@ -55,7 +55,6 @@ liger-kernel = "==0.8.0" #TO BE ADJUSTED
 post-training-toolkit = {git = "https://github.com/microsoft/post-training-toolkit.git"}
 ollama="==0.6.2"
 
-
 [tasks]
 # 1. This task forces the isolated unsloth installation
 install-unsloth = "pip install unsloth==2026.5.7 unsloth_zoo==2026.5.4 --no-deps"
@@ -76,3 +75,29 @@ env = { PYTHONPATH = "${PYTHONPATH}:${PIXI_PROJECT_ROOT}" }
 
 [target.win-64.activation]
 env = { PYTHONPATH = "%PYTHONPATH%;%PIXI_PROJECT_ROOT%" }
+
+# --- 2. LABEL STUDIO ENVIRONMENTS ---
+
+[feature.label-studio]
+platforms = ["linux-64"]
+
+[feature.label-studio.dependencies]
+git = "*"
+wget = "*"
+
+[feature.label-studio.pypi-dependencies]
+label-studio = "==1.23.0"
+
+[feature.label-studio.tasks]
+start_label_studio = "label-studio"
+
+install_sam2 = "mkdir -p ~/repos && git clone https://github.com/facebookresearch/segment-anything-2.git ~/repos/segment-anything-2 && cd ~/repos/segment-anything-2 && pip install -e ."
+install_ls_ml = "git clone https://github.com/HumanSignal/label-studio-ml-backend.git ~/repos/label-studio-ml-backend && cd ~/repos/label-studio-ml-backend && pip install -e . && cd label_studio_ml/examples/segment_anything_2_image && pip install -r requirements.txt"
+download_sam2_weights = "cd ~/repos/label-studio-ml-backend/label_studio_ml/examples && mkdir -p checkpoints && cd checkpoints && wget https://dl.fbaipublicfiles.com/segment_anything_2/092824/sam2.1_hiera_large.pt"
+start_ml_backend = "cd ~/repos/label-studio-ml-backend/label_studio_ml/examples && label-studio-ml start ./segment_anything_2_image -p 9090"
+
+install_ls = { depends-on = ["install_sam2", "install_ls_ml", "download_sam2_weights"] }
+
+
+[environments]
+label-studio = ["label-studio"]

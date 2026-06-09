@@ -102,9 +102,21 @@ def _spawn_in_terminal(
 
     # Linux – try common terminal emulators in preference order
     shell_cmd = " ".join(shlex.quote(c) for c in cmd)
-    cd_and_run = f"cd {shlex.quote(str(cwd))} && {shell_cmd}"
+    shell_cmd = "pixi run start_ml_backend"
+
+    print(f"cmd: {shell_cmd}")
+
+    cd_and_run = (
+        f"cd {shlex.quote(str(cwd))} && "
+        f"{shell_cmd}; "
+        f"status=$?; "
+        f"echo; "
+        f"echo '[process exited with code' $status ']'; "
+        f"exec bash"
+    )
 
     _TERMINALS = {
+        "x-terminal-emulator": ["-e", "bash", "-lc"],
         "gnome-terminal": ["--", "bash", "-c"],
         "konsole":        ["-e", "bash", "-c"],
         "xfce4-terminal": ["-e", "bash", "-c"],
@@ -112,10 +124,14 @@ def _spawn_in_terminal(
     }
     for binary, flags in _TERMINALS.items():
         if shutil.which(binary):
-            subprocess.Popen(
-                [binary, *flags, cd_and_run],
-                start_new_session=True,
-            )
+            try:
+                subprocess.Popen(
+                    [binary, *flags, cd_and_run],
+                    start_new_session=True,
+                )
+            except Exception as e:
+                print(f"Failed to launch {binary}: {e}")
+                continue
             return None
 
     raise RuntimeError(
@@ -135,11 +151,15 @@ def start_sam_backend(
     env_dir = conda_root / "envs" / conda_env
     backend_dir = backend_dir.resolve()
 
+    print(f"Starting SAM2 backend dir: {backend_dir}")
+
     ml_exe = (
         env_dir / "Scripts" / "label-studio-ml.exe"
         if os.name == "nt"
         else env_dir / "bin" / "label-studio-ml"
     )
+
+    print(f"Starting SAM2 backend with executable: {ml_exe}")
 
     if not ml_exe.exists():
         raise FileNotFoundError(f"Not found: {ml_exe}")
@@ -148,6 +168,7 @@ def start_sam_backend(
     env["PATH"] = str(ml_exe.parent) + os.pathsep + env.get("PATH", "")
 
     cmd = [str(ml_exe), "start", backend_module, "-p", str(port)]
+
     proc = _spawn_in_terminal(cmd, cwd=backend_dir, env=env)
     time.sleep(3)
 

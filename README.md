@@ -504,3 +504,48 @@ Run the ollama server:
 ```bash
 [target_folder]/bin/ollama serve
 ``` 
+
+# Label Studio
+
+We use Label Studio for data annotation and correction.
+
+## Installation
+```bash
+pixi run -e label-studio install_ls
+pixi run -e label-studio start_ml_backend
+pixi run -e label-studio start_label_studio 
+```
+
+Label Studio will be available at `http://localhost:8080` and the ML backend at `http://localhost:9090`.
+
+## Usage
+
+TO DO: adapt to usage both on Windows and Linux.
+
+Open the project and connect the backend to the project.  
+```bash
+python services.py --images-root /media/iaslab/data_bacchin/panizzolo \
+--conda-root /home/bacchin/vh-loop_env/vh-loop/.pixi \
+--ls-conda-env label-studio \
+--sam-conda-env label-studio \
+--start-sam \
+--sam-backend-dir ~/repos/label-studio-ml-backend/label_studio_ml/examples
+```
+
+Run all previous:
+```bash
+python main.py --api-key eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6ODA4ODIwODY3OSwiaWF0IjoxNzgxMDA4Njc5LCJqdGkiOiJlODVhNWMxOTg3MTE0M2M3OWMxZjVmMzY0MWY0ZDY3ZSIsInVzZXJfaWQiOiIxIn0.RS5uoapVS0VXhofrC-gB8YjF-2jklmLWwp6iczIZfak \
+ --project-title "paniz_train_04_02_SINGLE" \
+ --config-path /media/iaslab/data_bacchin/db/config_paniz_train_04_02_SINGLE.xml \
+ --jsonl /media/iaslab/data_bacchin/canonical_datasets/panizzolo2_paniz_train_04_02_single.canonical.jsonl \
+ --images-root /media/iaslab/data_bacchin \
+ --storage-path /media/iaslab/data_bacchin/panizzolo/paniz_train_04_02_SINGLE \
+ --start-services \
+ --connect-sam-backend \
+ --conda-root /home/bacchin/vh-loop_env/vh-loop/.pixi \
+ --ls-conda-env label-studio \
+ --sam-conda-env label-studio \
+ --sam-backend-dir ~/repos/label-studio-ml-backend/label_studio_ml/examples
+```
+ 
+
