@@ -23,7 +23,7 @@ training:
 testing:
    -   id: paniz_04-02_SINGLE
        dataset_schema: conversational # conversational, prompt-completion
-       jsonl_path: ${oc.env:DATA_PATH, /data}/canonical_datasets/panizzolo_paniz_train_04_02_single.canonical.jsonl
+       jsonl_path: ${oc.env:DATA_PATH, /data}/canonical_datasets/panizzolo2_paniz_train_04_02_single.canonical.jsonl
        root_override: ${oc.env:DATA_PATH, /data}
     # -   id: paniz_03-30_SINGLE
     #     dataset_schema: conversational # conversational, prompt-completion

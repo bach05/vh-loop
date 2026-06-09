@@ -3,7 +3,7 @@ dataset: CocoWasteDataset
 data_dicts:
   paniz_train_04_02_single:
     folder_path: ""
-    labels: "/media/iaslab/data_bacchin/panizzolo/paniz_train_04_02_SINGLE.json"
+    labels: "/media/iaslab/data_bacchin/panizzolo/paniz_train_04_02_REMAP.json"
 
 CLASSES:
     "motor_scrap":
