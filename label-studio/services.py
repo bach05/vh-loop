@@ -101,10 +101,7 @@ def _spawn_in_terminal(
         )
 
     # Linux – try common terminal emulators in preference order
-    shell_cmd = " ".join(shlex.quote(c) for c in cmd)
     shell_cmd = "pixi run start_ml_backend"
-
-    print(f"cmd: {shell_cmd}")
 
     cd_and_run = (
         f"cd {shlex.quote(str(cwd))} && "
@@ -153,7 +150,6 @@ def start_sam_backend(
     """Start SAM2 ML backend cross-platform."""
     env_dir = conda_root / "envs" / conda_env
     backend_dir = backend_dir.resolve()
-
     print(f"Starting SAM2 backend dir: {backend_dir}")
 
     ml_exe = (
@@ -161,9 +157,7 @@ def start_sam_backend(
         if os.name == "nt"
         else env_dir / "bin" / "label-studio-ml"
     )
-
     print(f"Starting SAM2 backend with executable: {ml_exe}")
-
     if not ml_exe.exists():
         raise FileNotFoundError(f"Not found: {ml_exe}")
 
@@ -171,11 +165,6 @@ def start_sam_backend(
         raise ValueError("LABEL_STUDIO_API_KEY is required for the SAM backend")
 
     env = os.environ.copy()
-    #env["PATH"] = str(ml_exe.parent) + os.pathsep + env.get("PATH", "")
-
-    #print path
-    #print(f"Using PATH: {env['PATH']}")
-
     env["LABEL_STUDIO_URL"] = label_studio_url
     env["LABEL_STUDIO_API_KEY"] = label_studio_api_key
 
