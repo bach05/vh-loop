@@ -89,7 +89,9 @@ Clone the Label Studio ML backend and install it.
 ```bash
 git clone https://github.com/HumanSignal/label-studio-ml-backend.git
 cd label-studio-ml-backend
-pip install -e .
+python -m pip install -e .
+cd C:\ITR\label-studio-ml-backend\label_studio_ml\examples\segment_anything_2_image
+python -m pip install -r requirements.txt
 ```
 
 Create the checkpoint folder.
