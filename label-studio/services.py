@@ -128,6 +128,7 @@ def _spawn_in_terminal(
                 subprocess.Popen(
                     [binary, *flags, cd_and_run],
                     start_new_session=True,
+                    env=env,
                 )
             except Exception as e:
                 print(f"Failed to launch {binary}: {e}")
@@ -170,7 +171,11 @@ def start_sam_backend(
         raise ValueError("LABEL_STUDIO_API_KEY is required for the SAM backend")
 
     env = os.environ.copy()
-    env["PATH"] = str(ml_exe.parent) + os.pathsep + env.get("PATH", "")
+    #env["PATH"] = str(ml_exe.parent) + os.pathsep + env.get("PATH", "")
+
+    #print path
+    #print(f"Using PATH: {env['PATH']}")
+
     env["LABEL_STUDIO_URL"] = label_studio_url
     env["LABEL_STUDIO_API_KEY"] = label_studio_api_key
 
