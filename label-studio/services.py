@@ -101,7 +101,7 @@ def _spawn_in_terminal(
         )
 
     # Linux – try common terminal emulators in preference order
-    shell_cmd = "echo $PATH && ~/.pixi/bin/pixi run start_ml_backend"
+    shell_cmd = f"export LABEL_STUDIO_URL={env['LABEL_STUDIO_URL']} && export LABEL_STUDIO_API_KEY={env['LABEL_STUDIO_API_KEY']} && ~/.pixi/bin/pixi run start_ml_backend"
 
     cd_and_run = (
         f"cd {shlex.quote(str(cwd))} && "
@@ -113,11 +113,11 @@ def _spawn_in_terminal(
     )
 
     _TERMINALS = {
-        "x-terminal-emulator": ["-e", "bash", "-c"],
-        "gnome-terminal": ["--", "bash", "-c"],
-        "konsole":        ["-e", "bash", "-c"],
-        "xfce4-terminal": ["-e", "bash", "-c"],
-        "xterm":          ["-e", "bash", "-c"],
+        "x-terminal-emulator": ["-e", "bash", "-lc"],
+        "gnome-terminal": ["--", "bash", "-lc"],
+        "konsole":        ["-e", "bash", "-lc"],
+        "xfce4-terminal": ["-e", "bash", "-lc"],
+        "xterm":          ["-e", "bash", "-lc"],
     }
     for binary, flags in _TERMINALS.items():
         if shutil.which(binary):
