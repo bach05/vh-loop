@@ -101,7 +101,7 @@ def _spawn_in_terminal(
         )
 
     # Linux – try common terminal emulators in preference order
-    shell_cmd = "pixi run start_ml_backend"
+    shell_cmd = "echo $PATH && ~/.pixi/bin/pixi run start_ml_backend"
 
     cd_and_run = (
         f"cd {shlex.quote(str(cwd))} && "
@@ -113,7 +113,7 @@ def _spawn_in_terminal(
     )
 
     _TERMINALS = {
-        "x-terminal-emulator": ["-e", "bash", "-lc"],
+        "x-terminal-emulator": ["-e", "bash", "-c"],
         "gnome-terminal": ["--", "bash", "-c"],
         "konsole":        ["-e", "bash", "-c"],
         "xfce4-terminal": ["-e", "bash", "-c"],
@@ -138,6 +138,7 @@ def _spawn_in_terminal(
     )
 
 
+
 def start_sam_backend(
     conda_root: Path,
     conda_env: str,
@@ -149,7 +150,7 @@ def start_sam_backend(
 ) -> None:
     """Start SAM2 ML backend cross-platform."""
     env_dir = conda_root / "envs" / conda_env
-    backend_dir = backend_dir.resolve()
+    backend_dir = backend_dir.expanduser().resolve() #this to fix: since resolve concats the current root when ~ is used, need to test with a full path
     print(f"Starting SAM2 backend dir: {backend_dir}")
 
     ml_exe = (
