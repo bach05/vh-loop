@@ -188,9 +188,11 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="Start Label Studio and/or SAM2 backend.")
+    parser.add_argument("--api-key", required=True)
     parser.add_argument("--images-root", type=Path, required=True)
     parser.add_argument("--conda-root", type=Path, default=Path.home() / "mambaforge")
     parser.add_argument("--ls-conda-env", default="ls-ui")
+    parser.add_argument("--ls-url", default="http://localhost:8080")
     parser.add_argument("--ls-port", type=int, default=8080)
 
     parser.add_argument("--start-sam", action="store_true", help="Also start SAM2 backend")
@@ -223,5 +225,7 @@ if __name__ == "__main__":
             args.sam_backend_dir,
             args.sam_port,
             args.sam_module,
+            args.ls_url,
+            args.api_key
         )
         print("SAM2 backend started.")
