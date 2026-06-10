@@ -522,27 +522,40 @@ Label Studio will be available at `http://localhost:8080` and the ML backend at 
 
 TO DO: adapt to usage both on Windows and Linux.
 
-Open the project and connect the backend to the project.  
+Open the project and connect the backend to the project. You can use this to test the pipeline.  
 ```bash
-python label-studio/services.py --images-root /media/iaslab/data_bacchin/panizzolo \
---conda-root /home/bacchin/vh-loop_env/vh-loop/.pixi \
+pixi run -e label-studio python label-studio/services.py \
+--images-root "/media/iaslab/T7 Shield/panizzolo" \
+--conda-root /home/iaslab/workspaces/vh_loop_env/vh-loop/.pixi \
 --ls-conda-env label-studio \
 --sam-conda-env label-studio \
 --start-sam \
 --sam-backend-dir ~/repos/label-studio-ml-backend/label_studio_ml/examples
 ```
+Now register your user and copi the API key. 
 
-Run all previous:
+To generate psuedo-labels with SAM from a canonical JSOL annotated with bbox, before reviwing the samples in Label Studio, run: 
 ```bash
-python label-studio/main.py --api-key eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6ODA4ODIwODY3OSwiaWF0IjoxNzgxMDA4Njc5LCJqdGkiOiJlODVhNWMxOTg3MTE0M2M3OWMxZjVmMzY0MWY0ZDY3ZSIsInVzZXJfaWQiOiIxIn0.RS5uoapVS0VXhofrC-gB8YjF-2jklmLWwp6iczIZfak \
- --project-title "paniz_train_04_02_SINGLE" \
- --config-path /media/iaslab/data_bacchin/db/config_paniz_train_04_02_SINGLE.xml \
- --jsonl /media/iaslab/data_bacchin/canonical_datasets/panizzolo2_paniz_train_04_02_single.canonical.jsonl \
- --images-root /media/iaslab/data_bacchin \
- --storage-path /media/iaslab/data_bacchin/panizzolo/paniz_train_04_02_SINGLE \
+pixi run -e label-studio python label-studio/sam2_pseudolabel_jsonl.py \
+--jsonl "/media/iaslab/T7 Shield/panizzolo/panizzolo2_paniz_test_03_30_single.canonical.jsonl" \
+--images-root "/media/iaslab/T7 Shield" \
+--sam2-config "configs/sam2.1/sam2.1_hiera_l.yaml" \
+--sam2-checkpoint "/home/iaslab/repos/label-studio-ml-backend/label_studio_ml/examples/checkpoints/sam2.1_hiera_large.pt" \
+--device "cuda"
+```
+
+To setup a project for a canonical JSOL file:
+```bash
+pixi run -e label-studio python label-studio/main.py \
+--api-key eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6ODA4ODI3MTY0NCwiaWF0IjoxNzgxMDcxNjQ0LCJqdGkiOiI2NzQ2NDM1MDY0MjI0NDU0ODk0OWMzN2IwYjViMzFiZSIsInVzZXJfaWQiOiIxIn0.j-ciTGBTiEoOuNlATSEomix39Y6QgtSi1dcxdHm48gE \
+ --project-title "paniz_test_03_30_SAM" \
+ --config-path "/media/iaslab/T7 Shield/panizzolo/db/config_paniz_test_03_30_SAM.xml" \
+ --jsonl "/media/iaslab/T7 Shield/panizzolo/panizzolo2_paniz_test_03_30_single.canonical.sam2.jsonl" \
+ --images-root "/media/iaslab/T7 Shield" \
+ --storage-path "/media/iaslab/T7 Shield/panizzolo/paniz_test_03_30_SINGLE" \
  --start-services \
  --connect-sam-backend \
- --conda-root /home/bacchin/vh-loop_env/vh-loop/.pixi \
+ --conda-root /home/iaslab/workspaces/vh_loop_env/vh-loop/.pixi \
  --ls-conda-env label-studio \
  --sam-conda-env label-studio \
  --sam-backend-dir ~/repos/label-studio-ml-backend/label_studio_ml/examples
