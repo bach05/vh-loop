@@ -4,6 +4,9 @@ data_dicts:
   paniz_train_04_02_single:
     folder_path: ""
     labels: "/media/iaslab/data_bacchin/panizzolo/paniz_train_04_02_REMAP.json"
+  paniz_test_03_30_single:
+    folder_path: ""
+    labels: "/media/iaslab/data_bacchin/panizzolo/paniz_test_03_30_REMAP.json"
 
 CLASSES:
     "motor_scrap":

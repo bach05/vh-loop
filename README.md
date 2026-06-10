@@ -524,7 +524,7 @@ TO DO: adapt to usage both on Windows and Linux.
 
 Open the project and connect the backend to the project.  
 ```bash
-python services.py --images-root /media/iaslab/data_bacchin/panizzolo \
+python label-studio/services.py --images-root /media/iaslab/data_bacchin/panizzolo \
 --conda-root /home/bacchin/vh-loop_env/vh-loop/.pixi \
 --ls-conda-env label-studio \
 --sam-conda-env label-studio \
@@ -534,7 +534,7 @@ python services.py --images-root /media/iaslab/data_bacchin/panizzolo \
 
 Run all previous:
 ```bash
-python main.py --api-key eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6ODA4ODIwODY3OSwiaWF0IjoxNzgxMDA4Njc5LCJqdGkiOiJlODVhNWMxOTg3MTE0M2M3OWMxZjVmMzY0MWY0ZDY3ZSIsInVzZXJfaWQiOiIxIn0.RS5uoapVS0VXhofrC-gB8YjF-2jklmLWwp6iczIZfak \
+python label-studio/main.py --api-key eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6ODA4ODIwODY3OSwiaWF0IjoxNzgxMDA4Njc5LCJqdGkiOiJlODVhNWMxOTg3MTE0M2M3OWMxZjVmMzY0MWY0ZDY3ZSIsInVzZXJfaWQiOiIxIn0.RS5uoapVS0VXhofrC-gB8YjF-2jklmLWwp6iczIZfak \
  --project-title "paniz_train_04_02_SINGLE" \
  --config-path /media/iaslab/data_bacchin/db/config_paniz_train_04_02_SINGLE.xml \
  --jsonl /media/iaslab/data_bacchin/canonical_datasets/panizzolo2_paniz_train_04_02_single.canonical.jsonl \
