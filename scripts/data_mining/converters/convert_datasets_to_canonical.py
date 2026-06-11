@@ -918,7 +918,10 @@ def run_conversion(config_paths: list[str | Path], options: CanonicalBuildOption
         entry_id = make_entry_id(entry)
         source_samples = samples_by_entry[entry_id]
         entry_records: list[DataRecord] = []
-        entry_label_names: set[str] = set()
+        entry_label_names: set[str] = {
+            sanitize_label_name(name) if options.sanitize_label_names else str(name)
+            for name in entry.classes.keys()
+        }
 
         for idx, sample in enumerate(source_samples, start=1):
             sample_id = f"{entry_id}_{idx:06d}"
@@ -1026,7 +1029,6 @@ def build_argparser() -> argparse.ArgumentParser:
 
     # Boolean CLI overrides. They default to None so YAML can control them.
     parser.add_argument("--drop-empty", dest="drop_empty", action="store_true", default=None)
-    parser.add_argument("--no-drop-empty", dest="drop_empty", action="store_false")
 
     parser.add_argument("--skip-invalid-bboxes", dest="skip_invalid_bboxes", action="store_true", default=None)
     parser.add_argument("--no-skip-invalid-bboxes", dest="skip_invalid_bboxes", action="store_false")
