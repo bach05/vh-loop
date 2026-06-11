@@ -109,7 +109,7 @@ greater_is_better: false              # false because lower eval_loss is better.
 
 save_strategy: "steps"                # when to save checkpoints: "no", "epoch", or "steps".
 
-save_steps: 100                    # Only used when save_strategy: "steps".
+save_steps: 200                    # Only used when save_strategy: "steps".
 
 save_total_limit: 1                   # Maximum number of checkpoints to keep.
 
