@@ -1,10 +1,10 @@
 adapter: 'qwen3_5'
 params:
-  model_name_or_path: 'unsloth/Qwen3.5-2B'
+  model_name_or_path: 'unsloth/Qwen3.5-9B'
   model_params:
     max_seq_length: 4096
     load_in_4bit: false # MoE QLoRA not recommended, dense 27B is fine
     load_in_8bit: false
     load_in_16bit: true
     full_finetuning: false
-    gpu_memory_utilization: 0.8 # set to a value between 0 and 1 to specify the percentage of GPU memory to utilize, e.g., 0.8 means using up to 80% of GPU memory. This can help prevent out-of-memory errors during training, especially when working with large models or limited GPU resources.
+    gpu_memory_utilization: 0.8 # set to a value between 0 and 1 to specify the percentage of GPU memory to utilize, e.g., 0.8 means using up to 80% of GPU memory. This can help prevent out-of-memory errors during training, especially when working with large models or limited GPU resources. 

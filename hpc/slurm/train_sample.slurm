@@ -2,10 +2,10 @@
 #SBATCH -o logs/outputs/%x_%j.out
 #SBATCH -e logs/errors/%x_%j.err
 #SBATCH -t 96:00:00
-#SBATCH -n 2
-#SBATCH -c 2
-#SBATCH -p allgroups
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=4
 #SBATCH --gres=gpu:a40:2
+#SBATCH -p allgroups
 #SBATCH --mem=32G
 #SBATCH --mail-user=bacchinalb@dei.unipd.it
 #SBATCH --mail-type=ALL
@@ -88,14 +88,18 @@ singularity exec \
   --bind "${CACHE_HOST}:/models" \
   "${SIF_HOST}" \
   bash -lc '
-    export PYTHONPATH=/workspace/vh-loop:/mnt/vh-loop:${PYTHONPATH}
+    export PYTHONPATH=/workspace/vh-loop:${PYTHONPATH}
     cd /workspace/vh-loop
 
-    pixi run --manifest-path /mnt/vh-loop \
-      python tests/train_sample.py \
-        --config-name "'"${ENTRYPOINT_YAML}"'" \
-        trainer="'"${TRAINER_CONFIG_YAML}"'" \
-        model="'"${MODEL_CONFIG_YAML}"'"
+    pixi run --manifest-path /workspace/vh-loop \
+      torchrun \
+        --standalone \
+        --nnodes=1 \
+        --nproc_per_node=2 \
+        tests/train_sample.py \
+          --config-name "'"${ENTRYPOINT_YAML}"'" \
+          trainer="'"${TRAINER_CONFIG_YAML}"'" \
+          model="'"${MODEL_CONFIG_YAML}"'"
   ' 2>&1 | tee "${HOST_LOG}"
 
 
