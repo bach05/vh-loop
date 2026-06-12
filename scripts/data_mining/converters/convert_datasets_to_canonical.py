@@ -683,7 +683,25 @@ def sample_to_data_record(
         bbox = BoundingBox(tl=Point(x=x1, y=y1), br=Point(x=x2, y=y2))
 
         points = None
-        if options.generate_center_points:
+        raw_points = ann.get("points")
+        if raw_points:
+            points = []
+            for p in raw_points:
+                if isinstance(p, dict):
+                    px = p.get("x")
+                    py = p.get("y")
+                    is_positive = p.get("is_positive", True)
+                else:
+                    px, py = p[:2]
+                    is_positive = True
+                points.append(
+                    Point(
+                        x=int(round(float(px))),
+                        y=int(round(float(py))),
+                        is_positive=bool(is_positive),
+                    )
+                )
+        elif options.generate_center_points:
             points = [
                 Point(
                     x=round((x1 + x2) / 2),
@@ -694,11 +712,19 @@ def sample_to_data_record(
 
         metadata_attrs: dict[str, str] = {}
         if options.include_instance_metadata:
+            raw_attributes = ann.get("attributes") or {}
             metadata_attrs = {
                 "raw_label": str(raw_label),
                 "raw_bbox_xywh": json.dumps(raw_bbox, separators=(",", ":")),
                 "source_entry": make_entry_id(entry),
             }
+            for key, value in raw_attributes.items():
+                if value is None:
+                    continue
+                metadata_attrs[str(key)] = (
+                    value if isinstance(value, str)
+                    else json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+                )
 
         annotations.append(
             InstanceAnnotation(
@@ -707,8 +733,8 @@ def sample_to_data_record(
                 label_name=label_name,
                 bbox=bbox,
                 points=points,
-                mask=None,
-                caption=None,
+                mask=ann.get("mask", None),
+                caption=ann.get("caption", None),
                 attributes=metadata_attrs,
             )
         )
@@ -731,9 +757,15 @@ def sample_to_data_record(
         "folder_path": entry.folder_path,
         "num_instances": len(annotations),
         "num_invalid_annotations_skipped": invalid_count,
-        "bbox_source": "grounder_bbox_xywh_pixel",
+        "bbox_source": sample.get("bbox_source", "grounder_bbox_xywh_pixel"),
         "bbox_coordinate_space": "pixel_xyxy",
     }
+    asset_caption = sample.get("caption") or sample.get("asset_caption")
+    if asset_caption:
+        # ImageAsset in the current converter is instantiated without a top-level
+        # caption field, therefore keep the asset-level caption in metadata.
+        asset_metadata["caption"] = str(asset_caption)
+        asset_metadata["asset_caption"] = str(asset_caption)
 
     asset = ImageAsset(
         type="image",

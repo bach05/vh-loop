@@ -2,7 +2,7 @@ configs:
   - dataset_grounding_configs/cosmari.yaml
   - dataset_grounding_configs/warpD.yaml
   - dataset_grounding_configs/zerowaste.yaml
-  - dataset_grounding_configs/panizzolo2.yaml
+  - dataset_grounding_configs/panizzolo3.yaml
 
 # All asset.uri values will be written relative to this folder when uri_mode=relative.
 # At training/loading time, pass dataset_root=/media/iaslab/data_bacchin.

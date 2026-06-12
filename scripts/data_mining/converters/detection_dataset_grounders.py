@@ -7,6 +7,7 @@ import json
 import random
 from abc import ABC, abstractmethod
 import os
+import xml.etree.ElementTree as ET
 
 class BaseWasteDataset(ABC):
     """
@@ -273,6 +274,316 @@ class WarpDataset(BaseWasteDataset):
                 "height": height,
                 "annotations": annotations
             }
+            yield sample
+
+
+# -------------------- CVAT Dataset --------------------
+class CVATDataset(BaseWasteDataset):
+    """Grounder for CVAT XML annotations.
+
+    Expected CVAT mapping:
+    - one <image> element -> one yielded sample;
+    - instance masks are read from <mask> elements;
+    - bbox is extracted from the decoded CVAT mask RLE when possible,
+      otherwise from left/top/width/height;
+    - instance caption is the mask attribute named "description";
+    - asset-level caption is the attribute "description" of the tag
+      <tag label="asset_description">.
+
+    The yielded annotations remain backward-compatible with the existing
+    converter: at minimum they contain {"class", "bbox"}. Additional keys
+    {"points", "caption", "mask", "attributes"} can be consumed by an
+    extended canonical converter.
+    """
+
+    def __init__(self, xml_path, classes_dict=None, detailed_ratio=0.2, img_root=None,
+                 include_masks=True, include_mask_rle=True):
+        super().__init__(classes_dict or {}, detailed_ratio)
+        self.xml_path = str(xml_path)
+        self.img_root = img_root
+        self.include_masks = include_masks
+        self.include_mask_rle = include_mask_rle
+
+    def _resolve_image_path(self, file_name):
+        if not file_name:
+            return file_name
+        if self.img_root is not None:
+            return os.path.join(self.img_root, file_name)
+        return file_name
+
+    @staticmethod
+    def _clean_text(value):
+        if value is None:
+            return None
+        value = str(value).strip()
+        return value if value else None
+
+    @classmethod
+    def _attributes_dict(cls, node):
+        attrs = {}
+        for attr in node.findall("attribute"):
+            name = cls._clean_text(attr.get("name"))
+            value = cls._clean_text(attr.text)
+            if name is not None and value is not None:
+                attrs[name] = value
+        return attrs
+
+    @classmethod
+    def _attribute_text(cls, node, name):
+        return cls._attributes_dict(node).get(name)
+
+    @classmethod
+    def _asset_description(cls, image_el):
+        for tag in image_el.findall("tag"):
+            if tag.get("label") != "asset_description":
+                continue
+            # In the provided XML this is <attribute name="description">...</attribute>.
+            desc = cls._attribute_text(tag, "description")
+            if desc:
+                return desc
+            # Fallback for non-standard exports where the text is directly in the tag.
+            desc = cls._clean_text(tag.text)
+            if desc:
+                return desc
+        return None
+
+    @staticmethod
+    def _parse_rle(rle_text):
+        if not rle_text:
+            return []
+        # CVAT exports comma-separated counts; split is tolerant to extra spaces.
+        return [int(v) for v in str(rle_text).replace(",", " ").split() if v]
+
+    @staticmethod
+    def _clip_bbox_xywh(x, y, w, h, img_w, img_h):
+        x = max(0.0, min(float(x), float(img_w)))
+        y = max(0.0, min(float(y), float(img_h)))
+        w = max(0.0, min(float(w), float(img_w) - x))
+        h = max(0.0, min(float(h), float(img_h) - y))
+        return [x, y, w, h]
+
+    @classmethod
+    def _bbox_and_centroid_from_cvat_rle(cls, *, rle_text, left, top, width, height,
+                                        img_width, img_height):
+        """Return (bbox_xywh, centroid_xy, foreground_area).
+
+        CVAT XML mask RLE is interpreted as alternating background/foreground
+        runs over the cropped mask rectangle, starting with background. This
+        function does not allocate the full mask; it accumulates foreground
+        coordinates directly from runs.
+        """
+        counts = cls._parse_rle(rle_text)
+        crop_w = int(round(float(width)))
+        crop_h = int(round(float(height)))
+        left_i = int(round(float(left)))
+        top_i = int(round(float(top)))
+
+        fallback_bbox = cls._clip_bbox_xywh(left_i, top_i, crop_w, crop_h, img_width, img_height)
+        fallback_point = [round(left_i + crop_w / 2), round(top_i + crop_h / 2)]
+
+        if crop_w <= 0 or crop_h <= 0 or not counts:
+            return fallback_bbox, fallback_point, 0
+
+        expected = crop_w * crop_h
+        if sum(counts) != expected:
+            # If the RLE is malformed, keep the conservative CVAT rectangle.
+            return fallback_bbox, fallback_point, 0
+
+        min_x = crop_w
+        min_y = crop_h
+        max_x = -1
+        max_y = -1
+        sum_x = 0.0
+        sum_y = 0.0
+        area = 0
+
+        pos = 0
+        foreground = False
+        for run in counts:
+            run = int(run)
+            if run <= 0:
+                foreground = not foreground
+                continue
+
+            if foreground:
+                end = pos + run
+                p = pos
+                while p < end:
+                    y = p // crop_w
+                    x0 = p % crop_w
+                    n = min(end - p, crop_w - x0)
+                    x1 = x0 + n - 1
+
+                    min_x = min(min_x, x0)
+                    max_x = max(max_x, x1)
+                    min_y = min(min_y, y)
+                    max_y = max(max_y, y)
+                    sum_x += n * (x0 + x1) / 2.0
+                    sum_y += n * y
+                    area += n
+                    p += n
+
+            pos += run
+            foreground = not foreground
+
+        if area <= 0:
+            return fallback_bbox, fallback_point, 0
+
+        x = left_i + min_x
+        y = top_i + min_y
+        w = max_x - min_x + 1
+        h = max_y - min_y + 1
+        bbox = cls._clip_bbox_xywh(x, y, w, h, img_width, img_height)
+        centroid = [round(left_i + sum_x / area), round(top_i + sum_y / area)]
+        return bbox, centroid, area
+
+    @staticmethod
+    def _bbox_and_centroid_from_box(box_el, img_width, img_height):
+        xtl = float(box_el.get("xtl"))
+        ytl = float(box_el.get("ytl"))
+        xbr = float(box_el.get("xbr"))
+        ybr = float(box_el.get("ybr"))
+        x = min(xtl, xbr)
+        y = min(ytl, ybr)
+        w = abs(xbr - xtl)
+        h = abs(ybr - ytl)
+        x, y, w, h = CVATDataset._clip_bbox_xywh(x, y, w, h, img_width, img_height)
+        return [x, y, w, h], [round(x + w / 2), round(y + h / 2)]
+
+    @staticmethod
+    def _parse_points(points_text):
+        pts = []
+        for token in str(points_text or "").split(";"):
+            token = token.strip()
+            if not token:
+                continue
+            x, y = token.split(",")[:2]
+            pts.append((float(x), float(y)))
+        return pts
+
+    @classmethod
+    def _bbox_and_centroid_from_points(cls, points_text, img_width, img_height):
+        pts = cls._parse_points(points_text)
+        if not pts:
+            return None, None
+        xs = [p[0] for p in pts]
+        ys = [p[1] for p in pts]
+        x = min(xs)
+        y = min(ys)
+        w = max(xs) - x
+        h = max(ys) - y
+        bbox = cls._clip_bbox_xywh(x, y, w, h, img_width, img_height)
+        centroid = [round(sum(xs) / len(xs)), round(sum(ys) / len(ys))]
+        return bbox, centroid
+
+    def __iter__(self):
+        root = ET.parse(self.xml_path).getroot()
+
+        for image_el in root.findall("image"):
+            image_name = image_el.get("name", "")
+            width = int(float(image_el.get("width")))
+            height = int(float(image_el.get("height")))
+            asset_caption = self._asset_description(image_el)
+
+            annotations = []
+
+            # Main path for your dataset: instance masks.
+            for mask_el in image_el.findall("mask"):
+                label = self._clean_text(mask_el.get("label"))
+                if label is None:
+                    continue
+
+                bbox, centroid, area = self._bbox_and_centroid_from_cvat_rle(
+                    rle_text=mask_el.get("rle"),
+                    left=mask_el.get("left", 0),
+                    top=mask_el.get("top", 0),
+                    width=mask_el.get("width", 0),
+                    height=mask_el.get("height", 0),
+                    img_width=width,
+                    img_height=height,
+                )
+                if bbox[2] <= 0 or bbox[3] <= 0:
+                    continue
+
+                attrs = self._attributes_dict(mask_el)
+                mask_payload = None
+                if self.include_masks:
+                    mask_payload = {
+                        "format": "cvat_rle",
+                        "left": int(round(float(mask_el.get("left", 0)))),
+                        "top": int(round(float(mask_el.get("top", 0)))),
+                        "width": int(round(float(mask_el.get("width", 0)))),
+                        "height": int(round(float(mask_el.get("height", 0)))),
+                    }
+                    if self.include_mask_rle:
+                        mask_payload["rle"] = mask_el.get("rle", "")
+
+                annotations.append({
+                    "class": label,
+                    "bbox": bbox,
+                    "points": [{"x": int(centroid[0]), "y": int(centroid[1]), "is_positive": True}],
+                    "caption": attrs.get("description"),
+                    "mask": mask_payload,
+                    "attributes": {
+                        **attrs,
+                        "cvat_shape_type": "mask",
+                        "cvat_source": mask_el.get("source", ""),
+                        "cvat_occluded": mask_el.get("occluded", "0"),
+                        "cvat_z_order": mask_el.get("z_order", "0"),
+                        "mask_area_px": str(area),
+                    },
+                })
+
+            # Optional fallback: CVAT box annotations, useful if a future export contains them.
+            for box_el in image_el.findall("box"):
+                label = self._clean_text(box_el.get("label"))
+                if label is None:
+                    continue
+                bbox, centroid = self._bbox_and_centroid_from_box(box_el, width, height)
+                if bbox[2] <= 0 or bbox[3] <= 0:
+                    continue
+                attrs = self._attributes_dict(box_el)
+                annotations.append({
+                    "class": label,
+                    "bbox": bbox,
+                    "points": [{"x": int(centroid[0]), "y": int(centroid[1]), "is_positive": True}],
+                    "caption": attrs.get("description"),
+                    "mask": None,
+                    "attributes": {**attrs, "cvat_shape_type": "box"},
+                })
+
+            # Optional fallback: polygons are converted to a bbox and vertex-average point.
+            for poly_el in image_el.findall("polygon"):
+                label = self._clean_text(poly_el.get("label"))
+                if label is None:
+                    continue
+                bbox, centroid = self._bbox_and_centroid_from_points(poly_el.get("points"), width, height)
+                if bbox is None or bbox[2] <= 0 or bbox[3] <= 0:
+                    continue
+                attrs = self._attributes_dict(poly_el)
+                annotations.append({
+                    "class": label,
+                    "bbox": bbox,
+                    "points": [{"x": int(centroid[0]), "y": int(centroid[1]), "is_positive": True}],
+                    "caption": attrs.get("description"),
+                    "mask": None,
+                    "attributes": {
+                        **attrs,
+                        "cvat_shape_type": "polygon",
+                        "cvat_points": poly_el.get("points", ""),
+                    },
+                })
+
+            sample = {
+                "image": self._resolve_image_path(image_name),
+                "width": width,
+                "height": height,
+                "annotations": annotations,
+            }
+            if asset_caption is not None:
+                sample["caption"] = asset_caption
+                sample["asset_caption"] = asset_caption
+
             yield sample
 
 
