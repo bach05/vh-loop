@@ -15,6 +15,7 @@ BoxItem-like containers.
 
 import logging
 from pathlib import Path
+import yaml
 
 import hydra
 from hydra.utils import to_absolute_path
@@ -53,6 +54,7 @@ def main(cfg: DictConfig) -> None:
     # ------------------------------------------------------------------
     # Evaluate each prediction file
     # ------------------------------------------------------------------
+
     prediction_files = resolve_prediction_files(cfg)
     if not prediction_files:
         raise ValueError("No prediction JSONL files found. Use predictions or predictions_dir.")
@@ -66,6 +68,29 @@ def main(cfg: DictConfig) -> None:
 
         pred_samples, _ = load_canonical_samples(pred_path)
         pred_samples_by_model[model_name] = pred_samples
+
+        #Load gt samples from config folder
+        logging.info(f"********* Looking for config file in {pred_path.parent / 'configs' / 'config.yaml'} to load GT samples for {model_name}")
+        test_folder = pred_path.parent
+        config_file = test_folder / "configs" / "config.yaml"
+        if config_file.exists():
+            with config_file.open() as f:
+                cfg = yaml.safe_load(f)
+        else:
+            logging.warning(f"Config file not found at {config_file}, discarding evaluation of {model_name}")
+            continue
+
+        merged_gt_samples = {}
+        for test_dict in cfg['datasets']['testing']:
+            testing_jsonl_file = to_absolute_path(test_dict['jsonl_path'])
+
+            gt_samples, gt_info = load_canonical_samples(testing_jsonl_file)
+            logging.info(f"Loaded {len(gt_samples)} GT samples from {gt_path}")
+            logging.info(f"GT dataset_id: {gt_info.dataset_id}")
+            merged_gt_samples.update(gt_samples)
+
+        logging.info(f"Total merged GT samples for {model_name}: {len(merged_gt_samples)}")
+        logging.info("--------------------------------------------------\n")
 
         metric_rows, summary = evaluate_prediction_file(
             model_name=model_name,

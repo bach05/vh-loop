@@ -222,6 +222,15 @@ def main(cfg: DictConfig) -> None:
     os.makedirs(out_dir, exist_ok=True)
     logging.info("Output directory: %s", out_dir)
 
+    #Save the experiment configuration
+    config_dir = os.path.join(out_dir, "configs")
+    if not os.path.exists(config_dir):
+        os.makedirs(config_dir)
+    config_save_path = os.path.join(config_dir, "config.yaml")
+    with open(config_save_path, "w") as f:
+        OmegaConf.save(cfg, f)
+        logging.info(f"Config saved to {config_save_path}")
+
     # =========================================================================
     # 2. Load test dataset
     # =========================================================================
@@ -401,7 +410,12 @@ def main(cfg: DictConfig) -> None:
     # =========================================================================
     # 5. Write predictions to JSONL
     # =========================================================================
-    output_file = Path(out_dir) / "predictions.jsonl"
+    model_name = cfg.model.adapter
+    model_name = model_name + "_ft" if cfg.use_adapter else model_name
+    dataset_name = cfg.dataset_name
+    model_name = f"{model_name}_{dataset_name}" if dataset_name else model_name
+
+    output_file = Path(out_dir) / f"{model_name}_preds.jsonl"
     logging.info("Writing predictions to: %s", output_file)
 
     prediction_info = build_prediction_dataset_info(

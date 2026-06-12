@@ -8,7 +8,7 @@ import logging
 
 OmegaConf.register_new_resolver(
     "strip_null",
-    lambda val: f"_{val}" if val is not None else ""
+    lambda val: f"__{val}" if val is not None else ""
 )
 
 @hydra.main(version_base=None, config_path="../configs", config_name="train_entrypoint")
@@ -43,6 +43,15 @@ def main(cfg: DictConfig) -> None:
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
     logging.info(f"Output directory: {out_dir}")
+
+    #Save the experiment configuration
+    config_dir = os.path.join(out_dir, "configs")
+    if not os.path.exists(config_dir):
+        os.makedirs(config_dir)
+    config_save_path = os.path.join(config_dir, "config.yaml")
+    with open(config_save_path, "w") as f:
+        OmegaConf.save(cfg, f)
+        logging.info(f"Config saved to {config_save_path}")
 
     #Load data
     dataset_info = read_dataset_info(cfg.dataset.training[0].jsonl_path)

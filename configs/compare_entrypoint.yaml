@@ -2,32 +2,15 @@ gt_jsonl: ${oc.env:DATA_PATH, /data}/canonical_datasets/panizzolo2_paniz_test_03
 
 # Option A: explicit list
 predictions:
-  # - name: gemma_lora
-  #   path: ${oc.env:MODEL_PATH, /models}/vhloop/testing/gemma4_panizzolo_lora/predictions.jsonl
-  # - name: gemma_lora_2
-  #   path: ${oc.env:MODEL_PATH, /models}/vhloop/testing/gemma4_panizzolo2_lora/predictions.jsonl
-  # - name: gemma
-  #   path: ${oc.env:MODEL_PATH, /models}/vhloop/testing/gemma4_panizzolo_lora_ORI_MODEL/predictions.jsonl
   - name: qwen_lora_V6
-    path: ${oc.env:MODEL_PATH, /models}/vhloop/testing/qwen3_5_unsloth_generic_waste3_unsloth_peft_v6/predictions.jsonl
+    path: ${oc.env:MODEL_PATH, /models}/vhloop/qwen3_5_unsloth_generic_waste3_unsloth_peft_v6
   - name: qwen_lora_V7
     path: ${oc.env:MODEL_PATH, /models}/vhloop/testing/qwen3_5_unsloth_generic_waste3_unsloth_peft_v7/predictions.jsonl
-  # - name: qwen_lora_V3
-  #   path: ${oc.env:MODEL_PATH, /models}/vhloop/testing/qwen3_5_panizzolo_lora_v3/predictions.jsonl
-  # - name: qwen_lora_V4
-  #   path: ${oc.env:MODEL_PATH, /models}/vhloop/testing/qwen3_5_generic_waste_lora_v4/predictions.jsonl
-  # - name: qwen_lora_V5
-  #   path: ${oc.env:MODEL_PATH, /models}/vhloop/testing/qwen3_5_unsloth_generic_waste_unsloth_peft_v5/predictions.jsonl
-#  - name: qwen_lora
-#    path: ${oc.env:MODEL_PATH, /models}/vhloop/testing/qwen3_5_panizzolo_lora/predictions.jsonl
-#  - name: qwen
-#    path: ${oc.env:MODEL_PATH, /models}/vhloop/testing/qwen3_5_panizzolo_lora_ORI_MODEL/predictions.jsonl
-
 
 # Option B: folder search
 #predictions_dir: null
 #patterns:
-#  - "*.jsonl"
+#  - "*/testing/predictions.jsonl" #default pattern
 
 thresholds: [0.1, 0.25, 0.5, 0.75, 0.9]
 

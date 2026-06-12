@@ -6,6 +6,7 @@ import pandas as pd
 from pathlib import Path
 from typing import Any, Iterable
 
+import logging
 from hydra.utils import to_absolute_path
 from omegaconf import DictConfig
 
@@ -93,14 +94,21 @@ def resolve_prediction_files(cfg: DictConfig) -> list[tuple[str, Path]]:
             found.append((p.stem, p))
         else:
             p = Path(to_absolute_path(str(item["path"])))
-            found.append((str(item.get("name", p.stem)), p))
+            p = p / "testing" / "predictions.jsonl"
+            if p.exists():
+                found.append((str(item.get("name", p.stem)), p))
+            else:
+                logging.warning(f"Predictions file not found at {p} for item {item}")
 
     predictions_dir = cfg.get("predictions_dir", None)
     if predictions_dir is not None:
         pred_dir = Path(to_absolute_path(str(predictions_dir)))
-        for pattern in cfg.get("patterns", ["*.jsonl"]):
+        for pattern in cfg.get("patterns", ["*/testing/predictions.jsonl"]):
             for p in sorted(pred_dir.glob(pattern)):
-                found.append((p.stem, p))
+                if p.exists():
+                    found.append((p.stem, p))
+                else:
+                    logging.warning(f"Predictions file not found at {p} for pattern {pattern}")
 
     # Deduplicate by resolved path, preserving last-seen name.
     dedup: dict[Path, tuple[str, Path]] = {}

@@ -13,15 +13,12 @@ train_framework: unsloth # HFTransformers, unsloth
 debug: false #when set to true, the code will run in debug mode, which may include additional logging, reduced dataset size, etc. Set to false for normal operation.
 max_debug_samples: 32 #number of iterations to run in debug mode, only effective when debug is true
 #enable_pbar: false #whether to enable progress bar during training/evaluation, set to false to disable it
-#
-#save_every: 100 #save the intermpixi run ediate results every N iterations, set to 0 to disable saving
-#
-#task: labelling #ident
+
 use_adapter: true #whether to load the fine-tuned adapter
+dataset_name: "${hydra:runtime.choices.dataset}"
 
-exp: v6
-
-exp_name: "${hydra:runtime.choices.model}_${hydra:runtime.choices.dataset}_${hydra:runtime.choices.peft}${strip_null:${hydra:runtime.choices.quantization}}_${exp}"
+exp: v7
+exp_name: "${hydra:runtime.choices.model}__${hydra:runtime.choices.dataset}${strip_null:${hydra:runtime.choices.quantization}}__${exp}"
 hydra:
   run:
-    dir: ${oc.env:MODEL_PATH, /models}/vhloop/testing/${exp_name}
+    dir: ${oc.env:MODEL_PATH, /models}/vhloop/experiments/${exp_name}/testing
