@@ -100,4 +100,4 @@ singularity exec \
 
 
 # Examle command to submit the job: 
-# sbatch hpc/slurm/train_sample.slurm train_entrypoint.yaml qwen_sft_trainer_CLUSTER qwen3_5_CLUSTER qwen_4B
+# sbatch hpc/slurm/train_sample.slurm train_entrypoint.yaml qwen_sft_trainer_CLUSTER qwen3_5_CLUSTER qwen_9B

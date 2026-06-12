@@ -96,7 +96,7 @@ report_to: "none"                     # Disable external reporting integrations 
 
 eval_strategy: "steps"                # Evaluation strategy: "no", "steps", or "epoch".
 
-eval_steps: 200                     # Only used when eval_strategy: "steps".
+eval_steps: 600                     # Only used when eval_strategy: "steps".
 
 metric_for_best_model: "eval_loss"    # Metric used to select the best checkpoint.
 
@@ -109,7 +109,7 @@ greater_is_better: false              # false because lower eval_loss is better.
 
 save_strategy: "steps"                # when to save checkpoints: "no", "epoch", or "steps".
 
-save_steps: 100
+save_steps: 600
 save_total_limit: 1                   # Maximum number of checkpoints to keep.
 
 load_best_model_at_end: true          # Reload the best checkpoint at the end. Requires eval/save strategies to match.
