@@ -1,7 +1,7 @@
 defaults:
   - /model: qwen3_5_unsloth # qwen3_5, gemma4
   - /experiment: test_exp
-  - /dataset: generic_waste2
+  - /dataset: generic_waste3
   - /transform: null
   - /peft: unsloth_peft
   - /trainer: qwen_sft_trainer # gemma4_sft_trainer, qwen_sft_trainer

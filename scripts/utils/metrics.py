@@ -6,7 +6,7 @@ from typing import Any
 
 from scripts.data.canonical_schema.sample.base import DataSample
 from scripts.utils.bbox import match_boxes
-from scripts.utils.io import extract_bbox_annotations
+from scripts.utils.schema_helpers import extract_bbox_annotations
 
 
 # ---------------------------------------------------------------------------

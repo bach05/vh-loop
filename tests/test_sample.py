@@ -40,6 +40,7 @@ from scripts.data.canonical_schema.annotations import InstanceAnnotation
 from scripts.data.canonical_schema.dataset_header import AnnotationInfo, DatasetInfo
 from scripts.data.canonical_schema.records import DataRecord, DatasetInfoRecord
 
+import scripts.models #needed to register the adapters
 from scripts.core import registry
 print("registered adapters:", list(registry._MODEL_ADAPTERS.keys()))
 
