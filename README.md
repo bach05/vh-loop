@@ -561,4 +561,9 @@ pixi run -e label-studio python label-studio/main.py \
  --sam-backend-dir ~/repos/label-studio-ml-backend/label_studio_ml/examples
 ```
  
+## Run the Simple GUI for configuration and testing
 
+A simple web-based GUI have been provided to facilitate the configuration of experiments.
+```bash
+pixi run python scripts/experiment_manager/gui/app.py
+```

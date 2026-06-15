@@ -8,9 +8,10 @@ from ..specs.backend_specs import BackendSpec, LocalBackendSpec, SlurmBackendSpe
 from ..specs.experiment_specs import ExperimentSpec
 
 class ExecutionService:
-    def __init__(self, workspace_dir: str):
-        self.workspace_dir = Path(workspace_dir)
-        self.entrypoint_script = "scripts/training/sft.py"
+    def __init__(self, running_dir: str, out_dir: str):
+        self.running_dir = Path(running_dir)
+        self.out_dir = Path(out_dir)
+        self.entrypoint_script = "tests/train_sample.py"
 
     def prepare_experiment(self, spec: ExperimentSpec, hydra_overrides: list[str]) -> Path:
         """Creates the directory structure and saves config, sh, and slurm files without running."""
@@ -21,7 +22,7 @@ class ExecutionService:
         dataset_id = dataset_name.id if dataset_name else "unknown"
         
         folder_name = f"{date_str}_{model_name}_{dataset_id}_{spec.name}"
-        exp_dir = self.workspace_dir / "experiments" / folder_name
+        exp_dir = self.out_dir / "experiments" / folder_name
         exp_dir.mkdir(parents=True, exist_ok=True)
 
         # 2. Save experiment_spec.yaml
@@ -39,7 +40,7 @@ class ExecutionService:
             yaml.dump(composed_config, f, default_flow_style=False)
 
         # 4. Generate command.sh
-        cmd_args = ["python", str(self.workspace_dir / self.entrypoint_script)] + hydra_overrides
+        cmd_args = ["python", str(self.running_dir / self.entrypoint_script)] + hydra_overrides
         cmd_sh_path = exp_dir / "command.sh"
         with open(cmd_sh_path, "w") as f:
             f.write("#!/bin/bash\n")
@@ -93,12 +94,12 @@ class ExecutionService:
                 env["CUDA_VISIBLE_DEVICES"] = spec.backend.cuda_visible_devices
             cmd_sh_path = exp_dir / "command.sh"
             print(f"Executing locally: {cmd_sh_path}")
-            process = subprocess.Popen([str(cmd_sh_path)], env=env, cwd=self.workspace_dir)
+            process = subprocess.Popen([str(cmd_sh_path)], env=env, cwd=self.running_dir)
             return process, exp_dir
         elif isinstance(spec.backend, SlurmBackendSpec):
             slurm_file = exp_dir / "job.slurm"
             print(f"Submitting slurm job: {slurm_file}")
-            result = subprocess.run(["sbatch", str(slurm_file)], capture_output=True, text=True, cwd=self.workspace_dir)
+            result = subprocess.run(["sbatch", str(slurm_file)], capture_output=True, text=True, cwd=self.running_dir)
             if result.returncode != 0:
                 raise RuntimeError(f"sbatch failed: {result.stderr}")
             return result.stdout, exp_dir

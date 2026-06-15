@@ -16,17 +16,18 @@ from scripts.experiment_manager.specs.experiment_specs import ExperimentSpec
 from scripts.experiment_manager.gui.components import render_pydantic_form
 
 # Initialize Services
-WORKSPACE_DIR = Path(__file__).resolve().parents[3]
-configs_dir = WORKSPACE_DIR / "configs"
+RUNNING_DIR = Path(__file__).resolve().parents[3]
+OUT_DIR = Path(f"{os.getenv('MODEL_PATH', '/models')}/vhloop")
+configs_dir = RUNNING_DIR / "configs"
 config_service = ConfigService(str(configs_dir))
-execution_service = ExecutionService(str(WORKSPACE_DIR))
+execution_service = ExecutionService(str(RUNNING_DIR), str(OUT_DIR))
 
 # App State
 app_state = {
-    "exp_name": "v1",
+    "exp_name": "",
     "selected_model_file": "",
-    "selected_dataset_file": "",
-    "selected_trainer_file": "",
+    "selected_dataset_file": "generic_waste3.yaml",
+    "selected_trainer_file": "qwen_sft_trainer.yaml",
     "model_data": {},
     "dataset_data": {},
     "trainer_data": {},
