@@ -52,14 +52,6 @@ def main(cfg: DictConfig) -> None:
     class_aware = bool(cfg.get("class_aware", True))
 
     # ------------------------------------------------------------------
-    # Load ground truth
-    # ------------------------------------------------------------------
-    # gt_path = Path(to_absolute_path(str(cfg.gt_jsonl)))
-    # gt_samples, gt_info = load_canonical_samples(gt_path)
-    # logging.info(f"Loaded {len(gt_samples)} GT samples from {gt_path}")
-    # logging.info(f"GT dataset_id: {gt_info.dataset_id}")
-
-    # ------------------------------------------------------------------
     # Evaluate each prediction file
     # ------------------------------------------------------------------
 
@@ -109,7 +101,7 @@ def main(cfg: DictConfig) -> None:
 
         metric_rows, summary = evaluate_prediction_file(
             model_name=model_name,
-            gt_samples=gt_samples,
+            gt_samples=merged_gt_samples,
             pred_samples=pred_samples,
             thresholds=thresholds,
             class_aware=class_aware,
@@ -159,11 +151,11 @@ def main(cfg: DictConfig) -> None:
             )
 
         requested_ids = [str(s) for s in (vis_cfg.get("sample_ids", []) or [])]
-        sample_ids = requested_ids or sorted(gt_samples.keys())[: int(vis_cfg.get("max_samples", 25))]
+        sample_ids = requested_ids or sorted(merged_gt_samples.keys())[: int(vis_cfg.get("max_samples", 25))]
         image_root = vis_cfg.get("image_root", None)
 
         for sid in tqdm(sample_ids, desc="Processing visualizations"):
-            gt_sample = gt_samples.get(sid)
+            gt_sample = merged_gt_samples.get(sid)
             if gt_sample is None:
                 logging.warning(f"Skipping visualization: missing GT sample_id={sid}")
                 continue
