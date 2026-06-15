@@ -53,37 +53,7 @@ try:
 except Exception as exc:  # pragma: no cover
     raise RuntimeError("Pillow is required. Install it with: pip install pillow") from exc
 
-
-# -----------------------------------------------------------------------------
-# Import your existing converter helpers
-# -----------------------------------------------------------------------------
-
-
-def import_converter(module_name: str):
-    """Import the converter module.
-
-    By default this expects convert_datasets_to_canonical.py to be importable
-    from the current working directory or PYTHONPATH. If you place this script
-    next to convert_datasets_to_canonical.py and run it from the project root,
-    this should work directly.
-    """
-    try:
-        return __import__(module_name)
-    except Exception as first_exc:
-        # Fallback: add this script's folder to sys.path and try again.
-        script_dir = Path(__file__).resolve().parent
-        if str(script_dir) not in sys.path:
-            sys.path.insert(0, str(script_dir))
-        try:
-            return __import__(module_name)
-        except Exception as second_exc:
-            raise RuntimeError(
-                f"Could not import converter module {module_name!r}. "
-                "Run from the project root, place this script next to "
-                "convert_datasets_to_canonical.py, or pass --converter-module.\n"
-                f"First error: {first_exc}\nSecond error: {second_exc}"
-            ) from second_exc
-
+from scripts.data_mining.converters import convert_datasets_to_canonical
 
 # -----------------------------------------------------------------------------
 # Sampling
@@ -432,7 +402,7 @@ def main() -> None:
     if args.num_samples <= 0:
         raise ValueError("--num-samples must be > 0")
 
-    conv = import_converter(args.converter_module)
+    conv = convert_datasets_to_canonical
     run_cfg, _base_dir = conv.build_run_config_from_yaml(args.config)
     options = conv.run_config_to_options(run_cfg)
     entries = conv.collect_entry_specs(run_cfg.configs)

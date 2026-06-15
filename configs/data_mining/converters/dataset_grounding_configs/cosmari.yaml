@@ -2,10 +2,10 @@ dataset: CocoWasteDataset
 
 data_dicts:
   cosmari_train_s3000:
-    folder_path: "images/default"
+    folder_path: "cosmari_train_s3000/images/default"
     labels: "/media/iaslab/data_bacchin/cosmari/cosmari_train_s3000/annotations/instances_default.json"
   cosmari_test_s1000:
-    folder_path: "images/default"
+    folder_path: "cosmari_test_s1000/images/default"
     labels: "/media/iaslab/data_bacchin/cosmari/cosmari_test_s1000/annotations/instances_default_rmap=man_cosmari.json"
 
 CLASSES:
@@ -46,5 +46,5 @@ CLASSES:
 
 VISUALIZE: true
 
-GLOBAL_ROOT: "/media/iaslab/data_bacchin/cosmari/cosmari_train_s3000"
+GLOBAL_ROOT: "/media/iaslab/data_bacchin/cosmari"
 #GLOBAL_ROOT: "/mnt/Autolabelling_env/datasets/coco_cosmari_s3000"

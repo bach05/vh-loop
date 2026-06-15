@@ -64,7 +64,7 @@ except Exception:  # pragma: no cover
     def tqdm(x, **kwargs):
         return x
 
-import detection_dataset_grounders
+from scripts.data_mining.converters import detection_dataset_grounders
 
 from data.canonical_schema import (
     AnnotationInfo,
