@@ -91,7 +91,7 @@ def reconstruct_checkpoint_path(cfg: DictConfig) -> str:
 
     hydra_cfg = HydraConfig.get()
     testing_dir = hydra_cfg.run.dir
-    training_base_dir = testing_dir.replace("/testing/", "/training/")
+    training_base_dir = testing_dir.replace("/testing", "/training")
     checkpoint_dir = Path(training_base_dir)
 
     if not checkpoint_dir.exists():

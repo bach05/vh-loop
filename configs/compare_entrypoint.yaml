@@ -2,10 +2,8 @@ gt_jsonl: ${oc.env:DATA_PATH, /data}/canonical_datasets/panizzolo2_paniz_test_03
 
 # Option A: explicit list
 predictions:
-  - name: qwen_lora_V6
-    path: ${oc.env:MODEL_PATH, /models}/vhloop/qwen3_5_unsloth_generic_waste3_unsloth_peft_v6
   - name: qwen_lora_V7
-    path: ${oc.env:MODEL_PATH, /models}/vhloop/testing/qwen3_5_unsloth_generic_waste3_unsloth_peft_v7/predictions.jsonl
+    path: ${oc.env:MODEL_PATH, /models}/vhloop/testing/qwen3_5_unsloth_generic_waste3_unsloth_peft_v7/qwen3_5_ft_generic_waste3_preds.jsonl
 
 # Option B: folder search
 #predictions_dir: null
