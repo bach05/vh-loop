@@ -7,3 +7,4 @@ logs/
 *.log
 unsloth_compiled_cache/
 label-studio/cache.db
+config_manager/
