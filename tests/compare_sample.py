@@ -20,6 +20,7 @@ import yaml
 import hydra
 from hydra.utils import to_absolute_path
 from omegaconf import DictConfig
+from omegaconf import OmegaConf
 from tqdm import tqdm
 
 from scripts.utils import (
@@ -31,6 +32,13 @@ from scripts.utils import (
     plot_summary_bar,
     render_sample_grid
 )
+
+# Register custom Hydra resolvers only once --> TO DO: move it into a generic function/init shared between all scripts
+if not OmegaConf.has_resolver("strip_null"):
+    OmegaConf.register_new_resolver(
+        "strip_null",
+        lambda val: f"_{val}" if val is not None else "",
+    )
 
 
 @hydra.main(version_base=None, config_path="../configs", config_name="compare_entrypoint")
@@ -46,10 +54,10 @@ def main(cfg: DictConfig) -> None:
     # ------------------------------------------------------------------
     # Load ground truth
     # ------------------------------------------------------------------
-    gt_path = Path(to_absolute_path(str(cfg.gt_jsonl)))
-    gt_samples, gt_info = load_canonical_samples(gt_path)
-    logging.info(f"Loaded {len(gt_samples)} GT samples from {gt_path}")
-    logging.info(f"GT dataset_id: {gt_info.dataset_id}")
+    # gt_path = Path(to_absolute_path(str(cfg.gt_jsonl)))
+    # gt_samples, gt_info = load_canonical_samples(gt_path)
+    # logging.info(f"Loaded {len(gt_samples)} GT samples from {gt_path}")
+    # logging.info(f"GT dataset_id: {gt_info.dataset_id}")
 
     # ------------------------------------------------------------------
     # Evaluate each prediction file
@@ -74,18 +82,25 @@ def main(cfg: DictConfig) -> None:
         test_folder = pred_path.parent
         config_file = test_folder / "configs" / "config.yaml"
         if config_file.exists():
-            with config_file.open() as f:
-                cfg = yaml.safe_load(f)
+            try:
+                cfg = OmegaConf.load(config_file)
+                # Resolve ${oc.env:...}, ${...}, etc.
+                test_cfg = OmegaConf.to_container(cfg, resolve=True)
+            except Exception as e:
+                logging.exception(f"Failed to load/resolve Hydra config at {config_file}: {e}")
+                continue
         else:
-            logging.warning(f"Config file not found at {config_file}, discarding evaluation of {model_name}")
+            logging.warning(
+                f"Config file not found at {config_file}, discarding evaluation of {model_name}"
+            )
             continue
 
         merged_gt_samples = {}
-        for test_dict in cfg['datasets']['testing']:
-            testing_jsonl_file = to_absolute_path(test_dict['jsonl_path'])
+        for test_dict in test_cfg['dataset']['testing']:
+            testing_jsonl_file = test_dict['jsonl_path']
 
             gt_samples, gt_info = load_canonical_samples(testing_jsonl_file)
-            logging.info(f"Loaded {len(gt_samples)} GT samples from {gt_path}")
+            logging.info(f"Loaded {len(gt_samples)} GT samples from {testing_jsonl_file}")
             logging.info(f"GT dataset_id: {gt_info.dataset_id}")
             merged_gt_samples.update(gt_samples)
 

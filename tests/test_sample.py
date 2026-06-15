@@ -50,7 +50,6 @@ print("registered adapters:", list(registry._MODEL_ADAPTERS.keys()))
 from scripts.core.output_parsers import model_output_parsing
 
 
-
 # Register custom Hydra resolvers only once.
 if not OmegaConf.has_resolver("strip_null"):
     OmegaConf.register_new_resolver(

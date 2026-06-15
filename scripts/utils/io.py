@@ -94,7 +94,6 @@ def resolve_prediction_files(cfg: DictConfig) -> list[tuple[str, Path]]:
             found.append((p.stem, p))
         else:
             p = Path(to_absolute_path(str(item["path"])))
-            p = p / "testing" / "predictions.jsonl"
             if p.exists():
                 found.append((str(item.get("name", p.stem)), p))
             else:
@@ -103,7 +102,7 @@ def resolve_prediction_files(cfg: DictConfig) -> list[tuple[str, Path]]:
     predictions_dir = cfg.get("predictions_dir", None)
     if predictions_dir is not None:
         pred_dir = Path(to_absolute_path(str(predictions_dir)))
-        for pattern in cfg.get("patterns", ["*/testing/predictions.jsonl"]):
+        for pattern in cfg.get("patterns", ["*/testing/*.jsonl"]):
             for p in sorted(pred_dir.glob(pattern)):
                 if p.exists():
                     found.append((p.stem, p))
